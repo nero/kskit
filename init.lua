@@ -1,6 +1,6 @@
 -- Versionsnummer. Diese dient vor allem zu Diagnosezwecken.
 -- Ich weiss jetzt noch nicht, wie viele verschiedene Versionen von dem Script spaeter herumfliegen werden.
-KsKitVersion=0
+KsKitVer=0
 
 -- Tabelle, in der alle Lambda-Funktionen gespeichert werden
 -- Die Eintragung erfolgt durch die MainFunktion() vom Zielort aus.
