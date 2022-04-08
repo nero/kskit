@@ -43,13 +43,13 @@ Daher darf die Funktion nur einmal während der Initialisierung des Lua-Scriptes
 
 ![Basissignal mit Anmeldekontakt (gelb) und Signalzugschlussstelle (rot)](img/basissignal.png)
 
-### Signalzugschlussstalle
+### Signalzugschlussstelle
 
 Für jedes Hauptsignal muss eine Signalzugschlussstelle existieren.
 Als Signalzugschlussstelle dient ein Signalkontakt (rot), welcher nach der Überfahrt eines Signals dieses wieder auf den Haltbegriff zurücksetzt.
 Dieser Kontaktpunkt befindet nach dem Signal am Ende des Durchrutschweges.
 
-Die Bezeichnung als Zugschlussstelle ist historisch gewachsen, in Epoche V und VI löst die erste Achse des Zuges durch Befahren eines Gleisfreimeldeabschnittes die Rotschaltung aus.
+Die Bezeichnung als Zugschlussstelle ist historisch gewachsen, in Epoche V und VI löst die erste Achse des Zuges durch Befahren eines Gleisfreimeldeabschnittes die Haltschaltung aus.
 Das Einstellen auf 'Zugschluss' ist daher nicht notwendig.
 
 An dem Signalkontakt muss keine Lua-Funktion eingetragen werden.

@@ -1,8 +1,8 @@
 NAME=KsKit
 
-default: index.html $(NAME).pdf
+default: $(NAME).html $(NAME).pdf
 
-index.html: README.md
+$(NAME).html: README.md
 	awk -f grapho/md2html <$< >$@
 
 $(NAME).tex: README.md
