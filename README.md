@@ -24,7 +24,53 @@ Die Einbindung vom Anlagenscript aus erfolgt mittels `require("kskit")`.
 Findet EEP die Dateien von Lua nicht, wird im Ereignisfenster eine Liste von Orten ausgegeben, an denen die Dateien gesucht wurden.
 Die Orte sind in diesem Fall mit dem Installationsort abzugleichen.
 
-## Allgemeine Lua-Kniffe
+## Allgemeine Hauptsignale
+
+Damit KsKit ein Modell als Hauptsignal ansteuern kann, muss das Signalmodell über eine funktionierende Haltstellung verfügen.
+Trotz "Ks" im Namen ist KsKit in der Lage, Signalmodelle unabhängig vom Signalsystem anzusteuern.
+
+Um ein Signal ohne besondere Funktion in KsKit einzutragen, wird die Funktion `Basissignal` verwendet:
+
+```
+Basissignal(39, 1)
+```
+
+Der erste Parameter ist die ID-Nummer des Signals, der zweite Parameter ist die Haltstellung.
+Als Haltstellung verwenden die meisten Signalmodelle die 1, es gibt allerdings Ausnahmen.
+
+Das Aufrufen dieser Funktion legt die notwendigen Callbacks und Funktionen für das Signal an.
+Daher darf die Funktion nur einmal während der Initialisierung des Lua-Scriptes aufgerufen werden, nicht aus der EEPMain, MainFunktionen oder vergleichbaren heraus.
+
+![Basissignal mit Anmeldekontakt (gelb) und Signalzugschlussstelle (rot)](img/basissignal.png)
+
+### Signalzugschlussstalle
+
+Für jedes Hauptsignal muss eine Signalzugschlussstelle existieren.
+Als Signalzugschlussstelle dient ein Signalkontakt (rot), welcher nach der Überfahrt eines Signals dieses wieder auf den Haltbegriff zurücksetzt.
+Dieser Kontaktpunkt befindet nach dem Signal am Ende des Durchrutschweges.
+
+Die Bezeichnung als Zugschlussstelle ist historisch gewachsen, in Epoche V und VI löst die erste Achse des Zuges durch Befahren eines Gleisfreimeldeabschnittes die Rotschaltung aus.
+Das Einstellen auf 'Zugschluss' ist daher nicht notwendig.
+
+An dem Signalkontakt muss keine Lua-Funktion eingetragen werden.
+Auch die Wirkrichtung muss nicht beschränkt werden, dies bietet sich aber an, damit man über das Kontakt-Symbol leichter erkennen kann, in welcher Richtung das dazugehörige Signal steht.
+
+### Anmelde-Kontakt
+
+Optional zu einem jeden Hauptsignal kann ein Anmeldekontakt verwendet werden.
+Ein Anmeldekontakt kann ein Kontakt jeglicher Art sein, an dem die Lua-Funktion "Anmeldung_X" eingetragen wird.
+Anstelle "X" wird die ID-Nummer des folgenden Signales eingetragen.
+
+EEP überprüft bei dem Eintragen der Lua-Funktion, ob diese auch existiert, daher kann dieser Kontakt erst korrekt eingerichtet werden, nachdem EEP die `Basissignal`-Funktion ausgeführt hat, z.B. durch Wechsel in den 3D-Modus.
+
+Der Anmelde-Kontakt sollte eingerichtet werden, wenn das vorherige Signal keine automatische Anmeldung durch Weiterschaltung des Zugnamens durchgeführt hat.
+Dies trifft auch zu, wenn es kein vorheriges Signal gibt, weil es sich um eine Aufgleisstrecke, eine Ausfahrt eines virtuelles Depots oder um einen ungesicherten Anlagenbereich handelt.
+
+Wird keine Anmeldung durchgeführt und fährt ein Zug unangemeldet an einem logischen Vorsignal vorbei, wird die Anmeldung am jeweiligen Hauptsignal nachgeholt.
+
+Wer sich nicht daran stört, das Signale erst nach Überfahrt des Vorsignales auf Fahrt schalten, kann auf Anmeldungen generell verzichten.
+
+## Lua-Kniffe
 
 Bei der Entwicklung des Basisscriptes haben sich einige Mechanismen als sehr praktisch erwiesen, um die Komplexität des Codes im Zaum zu halten.
 
