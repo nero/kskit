@@ -7,6 +7,7 @@ title: KsKit für Eisenbahn.exe
 
 KsKit ist eine Sammlung von Lua-Funktionalität, welche ich auf meinen Anlagen für eine vorbildgerechte Signalisierung einsetze.
 Die hier geschilderten Anwendungsfälle und Programmschnipsel stellen kein Komplettpacket dar, sondern sind eher wie ein Kuchen anzusehen, aus denen man sich ein paar Rosinen herauspicken darf.
+Mehrere Anwendungsfälle benötigen überhaupt keinen Lua-Code und sind auch ohne KsKit anwendbar.
 
 Aus dem Basisscript dürfen Teile entnommen werden und anderswo verwendet werden, dabei ist die Herkunft und Versionsnummer zu nennen, z.B. als Quellcode-Kommentar.
 Die Versionsnummer befindet sich am Anfang des Basisscripts und kann über die Variable `KsKitVer` abgefragt werden.
@@ -24,96 +25,98 @@ Die Einbindung vom Anlagenscript aus erfolgt mittels `require("kskit")`.
 Findet EEP die Dateien von Lua nicht, wird im Ereignisfenster eine Liste von Orten ausgegeben, an denen die Dateien gesucht wurden.
 Die Orte sind in diesem Fall mit dem Installationsort abzugleichen.
 
-## Allgemeine Hauptsignale
+## Platzierung von Hauptsignalen
 
-Damit KsKit ein Modell als Hauptsignal ansteuern kann, muss das Signalmodell über eine funktionierende Haltstellung verfügen.
-Trotz "Ks" im Namen ist KsKit in der Lage, Signalmodelle unabhängig vom Signalsystem anzusteuern.
+Bei der Platzierung von Hauptsignalen ist eine Reihenfolge einzuhalten:
 
-Um ein Signal ohne besondere Funktion in KsKit einzutragen, wird die Funktion `Basissignal` verwendet:
+- Haltebereich
+- Signalstandort
+- Durchrutschweg
+- Gefahrenbereich wie z.B. Weichen, offene Strecke falls vorhanden
 
-```
-Basissignal(39, 1)
-```
+![Visualisierung der Reihenfolge. Der Haltebereich wird durch Betonschwellen dargestellt, der Durchrutschweg durch die rostige Schiene und der Gefahrenbereich durch die DKW.](img/reihenfolge.png)
 
-Der erste Parameter ist die ID-Nummer des Signals, der zweite Parameter ist die Haltstellung.
-Als Haltstellung verwenden die meisten Signalmodelle die 1, es gibt allerdings Ausnahmen.
+Im Haltebereich hält ein Zug, wenn das Signal einen Haltbegriff zeigt.
+Dabei muss auf die Länge geachtet werden.
+Speziell in Bahnhöfen könnte es passieren, das der Haltebereich für einen Zug nicht lang genug ist und dieser teilweise noch in den Weichen des Einfahrweges steht.
 
-Das Aufrufen dieser Funktion legt die notwendigen Callbacks und Funktionen für das Signal an.
-Daher darf die Funktion nur einmal während der Initialisierung des Lua-Scriptes aufgerufen werden, nicht aus der EEPMain, MainFunktionen oder vergleichbaren heraus.
+Zwischen Haltebereich und Signalstandort kann ein Zwischenraum gehalten werden.
+Dieser kann im Signal-Dialog unter "Halteabstand" in Metern angegeben werden.
+Dies entspricht der Situation beim Vorbild, wo Züge ja nicht direkt am Signal, sondern etliche Meter davor stehen.
 
-![Basissignal mit Anmeldekontakt (gelb) und Signalzugschlussstelle (rot)](img/basissignal.png)
+Der Durchrutschweg dient beim Vorbild als Pufferzone, falls ein Zug es nicht schafft, rechtzeitig am Signal zu halten.
+Beim Vorbild ist dieser Bereich bis zu 200 Meter lang.
+Da EEP in der Lage ist, Züge "sofort" anzuhalten, ist der Durchrutschweg nicht zwingend notwendig und kann auf Spielanlagen oder in Schattenbahnhöfen weggelassen werden.
 
-### Signalzugschlussstelle
+Der Gefahrenbereich ist in den meisten Fällen der Weichenbereich im Bahnhofskopf.
+Alternativ kann es sich auch um eine niveaugleiche Kreuzung oder ein bewegliches Brückenelement handeln.
+Ebenfalls gehört der folgende Streckenabschnitt zum Gefahrenbereich, da sich hier noch ein Zug befinden könnte, sowie der Haltebereich des darauffolgenden Hauptsignales.
 
-Für jedes Hauptsignal muss eine Signalzugschlussstelle existieren.
-Als Signalzugschlussstelle dient ein Signalkontakt (rot), welcher nach der Überfahrt eines Signals dieses wieder auf den Haltbegriff zurücksetzt.
-Dieser Kontaktpunkt befindet nach dem Signal am Ende des Durchrutschweges.
+### Haltstellungskontakt
 
-Die Bezeichnung als Zugschlussstelle ist historisch gewachsen, in Epoche V und VI löst die erste Achse des Zuges durch Befahren eines Gleisfreimeldeabschnittes die Haltschaltung aus.
-Das Einstellen auf 'Zugschluss' ist daher nicht notwendig.
+Um die Sicherheit der Signalschaltungen zu gewährleisten, ist es notwendig, jedes Hauptsignal mit einen Haltstellungskontakt zu versehen.
 
-An dem Signalkontakt muss keine Lua-Funktion eingetragen werden.
-Auch die Wirkrichtung muss nicht beschränkt werden, dies bietet sich aber an, damit man über das Kontakt-Symbol leichter erkennen kann, in welcher Richtung das dazugehörige Signal steht.
+![Haltstellungskontakt im Beispiel](img/haltstellungskontakt.png)
 
-### Anmelde-Kontakt
+Der Haltstellungskontakt wird im Bereich des Durchrutschweges platziert, also in etwas Abstand hinter dem Signal.
 
-Optional zu einem jeden Hauptsignal kann ein Anmeldekontakt verwendet werden.
-Ein Anmeldekontakt kann ein Kontakt jeglicher Art sein, an dem die Lua-Funktion "Anmeldung_X" eingetragen wird.
-Anstelle "X" wird die ID-Nummer des folgenden Signales eingetragen.
+## Fahrstrassen
 
-EEP überprüft bei dem Eintragen der Lua-Funktion, ob diese auch existiert, daher kann dieser Kontakt erst korrekt eingerichtet werden, nachdem EEP die `Basissignal`-Funktion ausgeführt hat, z.B. durch Wechsel in den 3D-Modus.
+Eine Möglichkeit zur Sicherung von Streckenabschnitten besteht in der Verwendung der EEP-eigenen Fahrstraßenfunktionalität.
 
-Der Anmelde-Kontakt sollte eingerichtet werden, wenn das vorherige Signal keine automatische Anmeldung durch Weiterschaltung des Zugnamens durchgeführt hat.
-Dies trifft auch zu, wenn es kein vorheriges Signal gibt, weil es sich um eine Aufgleisstrecke, eine Ausfahrt eines virtuelles Depots oder um einen ungesicherten Anlagenbereich handelt.
+Auf das Anlegen der Fahrstrassen wird hier nicht weiter eingegangen, dies kann im EEP-Handbuch nachgeschlagen werden.
 
-Wird keine Anmeldung durchgeführt und fährt ein Zug unangemeldet an einem logischen Vorsignal vorbei, wird die Anmeldung am jeweiligen Hauptsignal nachgeholt.
+Das FS-Startsignal sollte sich, wie in den Tutorials beschrieben, nicht allzu weit nach dem Hauptsignal befinden.
 
-Wer sich nicht daran stört, das Signale erst nach Überfahrt des Vorsignales auf Fahrt schalten, kann auf Anmeldungen generell verzichten.
+### Fahrstrassenzugschluss
 
-## Lua-Kniffe
+In den offiziellen Tutorials wird das FS-Endsignal vor das darauffolgende Hauptsignal platziert.
 
-Bei der Entwicklung des Basisscriptes haben sich einige Mechanismen als sehr praktisch erwiesen, um die Komplexität des Codes im Zaum zu halten.
+Der Bereich zwischen FS-Startsignal und FS-Endsignal wird allerdings nicht überwacht.
+Befindet sich der Haltepunkt des Signales nach dem FS-Startsignal, kann sich in dem dazwischenliegenden Bereich ein kurzes Fahrzeug verstecken und wird mit großer Wahrscheinlichkeit von dem nächsten Durchgangszug gewaltsam "aufgegabelt".
 
-Wer auf das KsKit aufbauend noch weitere Funktionalität scripten möchte, sollte sich die folgenden Sektionen zu Rate ziehen.
+Ebenfalls löst das Heranfahren an das Signal die Fahrstrasse auf, selbst wenn der Zugschluss noch im Weichenbereich steht.
+Besonderer Fahrstraßenausschlüsse, z.B. für Kreuzungen, wirken dann nicht mehr.
 
-### Mainfunktionen
+Wem das so nicht gefällt und den Mehraufwand nicht scheut, kann das FS-Endsignal auch nach dem Hauptsignal platzieren.
+Der nicht überwachte Bereich ist dann im Durchrutschweg.
+Befindet sich ein kurzes Fahrzeug in dem nicht überwachten Bereich, befindet sich dieses gerade auf der Fahrt in den Folgeabschnitt und entkommt somit der Aufgabelung durch den Zug.
 
-Das Basisscript bringt eine eigene EEPMain mit, daher darf von Seiten des Anlagen-Scriptes keine weitere EEPMain definiert werden.
-Soll Lua-Code im Rahmen der EEPMain ausgeführt werden, wird mittels MainFunktion() eine Lambda-Funktion registriert.
-Als Argument wird eine Funktion übergeben, welche keine Argumente nimmt.
-Diese Funktion wird dann in jedem Zyklus einmal aufgerufen.
+Dies hat den Nachteil, das die Fahrstrasse dann erst nach Abfahrt des Zuges aufgelöst wird.
+Dadurch bleibt die Einfahrtweg auch für andere Züge versperrt.
+Davon betroffen sind FS-Startsignale, welche mehr als eine Fahrstrasse zu einem Zielsignal besitzen.
+Dies ist eine typische Situation für Fahrstraßen nach Einfahrsignalen.
 
-Dies entspricht dem Beobachter-Muster in der professionellen Softwareentwicklung.
-Anstatt in einer zentralen Stelle alle zu informierenden Ziele aufzulisten, kann die EEPMain von verschiedenen Stellen im Quellcode aus "abonniert" werden.
+Dem kann abgeholfen werden, indem am Ende des Weichenbereiches ein Signalkontakt angelegt wird, welcher die Fahrstraße auflöst.
+Der Kontakt muss so eingestellt werden, das er nur bei Zugschluss wirkt.
+Führen mehere Fahrstraßen über den Kontakt, muss für jede Fahrstrasse ein eigener Kontakt angelegt werden.
+Die Kontakte müssen so eingestellt werden, das sie nur wirken, wenn die dazugehörige Fahrstraße gerade geschaltet ist.
 
-```
-MainFunktion(function()
-  if EEPGetSignalTrainsCount(1) > 0 then
-    EEPSetSignal(1, 1, 1)
-   end
-end)
-```
+![Fahrstrassenzugschlusstelle via Signalkontakt](img/fszugschluss.png)
 
-Dieser Programmcode bindet eine Funktion an die EEPMain.
-Die Funktion fragt ab, ob vor einem Signal ein Zug steht und schaltet in diesem Falle das Signal auf Fahrt.
+### Fahrstrassen mittels Lua
 
-### Signalfunktionen
+Es ist möglich, Fahrstraßen über Lua zu implementieren.
+Das Lua-Script ["Automatic Train Control"](https://github.com/FrankBuchholz/EEP-LUA-Automatic-Train-Control) macht das z.B. so.
 
-Analog zu den Mainfunktionen ergibt sich ein ähnliches Problem mit den Signal-Callbacks.
-Ein herkömmlicher Signal-Callback kann nur an einer einzigen Stelle definiert werden.
-An einigen Stellen ist es jedoch notwendig, das mehrere Stellen über ein Umschalten eines Signals informiert werden wollen.
+Lua-basierende Fahrstraßen sind nicht direkt über das Gleisbildstellpult ansteuerbar und sind daher nicht sonderlich offen für das händische Eingreifen in den Bahnbetrieb.
+Sie sind eher für reine Automatikanlagen geeignet.
 
-Mittels der SignalFunktion kann eine Funktion an ein Signal angebunden werden.
-Als erstes Argument bei der Anbindung wird die ID des Signales angegeben.
-Dabei kann es sich auch um ein Fahrstraßen-Signal handeln.
-Als zweites Argument wird eine Funktion eingetragen, welche als erstes Argument die neue Stellung übergeben bekommt.
+Die folgenden Kapitel beziehen sich auf die Fahrstraßensignale, die EEP anbietet.
 
-Der Mehrwert ist schnell ersichtlich: Waren bisher alle zu informierenden Vorsignale, Bahnschranken und dergleichen. in der EEPOnSignal_X() einzutragen, können sich die für die Vorsignale oder Bahnübergänge verantwortlichen Code-stellen nun selbstständig als "Abonnenten" der Signalstellung eintragen.
+## Auswahl von Signalmodellen
 
-Als Beispiel wird eine Signalfunktion definiert, welche lediglich die neue Stellung eines Signals ausgibt:
+Bei den Signalmodellen wird hier zwischen binären, mehrbegriffige und komplexen Signalmodellen unterschieden.
+Binäre Signalmodelle haben lediglich zwei Stellungen und sind mittels Fahrstrassen einfach zu managen.
+Ebenfalls passen sie gut zum EEP-Gleisbildstellpult, da dieses nur zwei Stellungen pro Signal anzuzeigen vermag.
 
-```
-SignalFunktion(1, function(Stellung)
-  print("Signal auf ", Stellung, " umgestellt")
-end)
-```
+Mehrbegriffige Signalmodelle haben, wie es der Name schon sagt, mehere Begriffe, die auch Geschwindigkeitsabstufungen erlauben.
+
+Komplexe Signalmodelle verfügen über weitere Stellungen für Vorsignalisierung des folgenden Hauptsignale oder gesonderte Abfahrtsbefehle.
+Für eine Vorbildgerechte Ansteuerung muss hier auf Lua zurückgegriffen werden.
+
+### Einabschnittsignale
+
+#### Blocksignale
+
+### Mehrabschnittssignale
