@@ -2,43 +2,67 @@
 -- Ich weiss jetzt noch nicht, wie viele verschiedene Versionen von dem Script spaeter herumfliegen werden.
 KsKitVer=0
 
--- Uebrige Konstanten
-Vmax=400
+Kennziffer=34
 
--- Tabelle, in der alle Lambda-Funktionen gespeichert werden
--- Die Eintragung erfolgt durch die MainFunktion() vom Zielort aus.
-MainFunktionTabelle={}
+local Callbacks = {}
 
--- Neues Main-Lambda registrieren
-function MainFunktion(Funktion)
-  table.insert(MainFunktionTabelle, Funktion)
-end
-
--- Alle Main-Lambda's ausfuehren
--- Dies ersetzt die Standard-EEP-Main Funktion.
-function EEPMain()
-  for cnt = 1, #MainFunktionTabelle do
-   MainFunktionTabelle[cnt]()
-  end
-  return 1
-end
-
--- Neues Signal-Lambda registrieren
-SignalFunktionen = {}
-function SignalFunktion(Signal, Funktion)
-  if not SignalFunktionen[Signal] then
-    EEPRegisterSignal(Signal)
-    -- Callback bei EEP registrieren
-    _G["EEPOnSignal_"..tostring(Signal)]=function(Stellung)
-      -- Alle registrierten Lambdas ausfuehren
-      for cnt = 1, #SignalFunktionen[Signal] do
-       SignalFunktionen[Signal][cnt](Stellung)
-      end
+function On(Name, Funktion)
+  -- Erlaube es, Signal und Weichen via Nummer zu referenzieren
+  if type(Name) == "number" then
+    if EEPGetSwitch(Name) > 0 then
+      Name = "EEPOnSwitch_"..tostring(Name)
+    elseif EEPGetSignal(Name) > 0 then
+      Name = "EEPOnSignal_"..tostring(Name)
     end
-    SignalFunktionen[Signal]={}
   end
-  -- In unsere eigene Tabelle eintragen
-  table.insert(SignalFunktionen[Signal], Funktion)
+  if type(Name) == "table" then
+    for _, Newname in pairs(Name) do
+      On(Newname, Funktion)
+    end
+    return
+  end
+  if type(Name) ~= "string" or string.match(Name, "EEP.+") == nil then
+    print("Verweigere Callback von "..type(Name).." "..tostring(Name))
+    return
+  end
+  if not Callbacks[Name] then
+    Callbacks[Name] = {}
+    if _G[Name] ~= nil then
+      print("Warnung: "..Name.."() von KsKit adoptiert")
+      table.insert(Callbacks[Name], _G[Name])
+    end
+    _G[Name] = function(...)
+      for cnt = 1, #Callbacks[Name] do
+        Callbacks[Name][cnt](...)
+      end
+      -- Nur EEPMain braucht dies, aber dringends
+      return 1
+    end
+    -- Bei Weichen und Signalen muss EEP vorher informiert werden
+    -- Item ist normal "Switch" oder "Signal"
+    local Item, Number = string.match(Name, 'EEPOn(.+)_(%d+)')
+    if Number ~= nil then
+      _G["EEPRegister"..Item](Number)
+    end
+  end
+  table.insert(Callbacks[Name], Funktion)
+end
+
+-- EEPMain-Callback registrieren
+function Main(Funktion)
+  On("EEPMain", Funktion)
+end
+
+-- Signal-Callback registrieren
+function OnSignal(Signal, Funktion)
+  EEPRegisterSignal(Signal)
+  On("EEPOnSignal_"..tostring(Signal), Funktion)
+end
+
+-- Weichen-Callbacks registrieren
+function OnSwitch(Switch, Funktion)
+  EEPRegisterSwitch(Switch)
+  On("EEPOnSwitch_"..tostring(Switch), Funktion)
 end
 
 -- Lua-Serializer und Deserializer laden
@@ -60,100 +84,130 @@ function speicherTabelle(Slot, Tabelle)
   EEPSaveData(Slot, serpent.line(Tabelle, {comment = false}))
 end
 
-SignalLesenFunktionen={}
+-- Referenz-Datenbank mit Signalen, Fahrstrassen & Weichen
+-- Geordnet nach Signal/Weichen-ID
+KsSignale = {}
 
--- Definiere ein Signal
--- Signal: ID-Nummer
--- Haltstellung: Nummer der Haltstellung, meistens 1
--- SchaltFunk: Callback, wird wiederholt aufgerufen, um Fahrt-Stellung des Signals zu erwirken
--- AbmeldeFunk: Wird nach Durchfahrt am Signal aufgerufen
-function Basissignal(Signal, Haltstellung, SchaltFunk, AbmeldeFunk)
-  if EEPGetSignal(Signal)==0 then
-    print("Anlagen-Fehler: ID ",Signal," ist kein Signal")
-    return
+-- KsSignale von GK3 sind sehr systematisch benannt, die moeglichen Stellungen lassen sich aus dem Namen herleiten
+function GK3KsBegriffe(Modell)
+  local Teile = {}
+  for str in string.gmatch(Modell, "([^_ ]+)") do
+    Teile[str]=true
   end
-  -- Funktion, damit anderer Programmcode das Signal lesen kann
-  SignalLesenFunktionen[Signal]=function()
-    local Stellung = EEPGetSignal(Signal)
-    if Stellung == 0 or Stellung == Haltstellung then
-      return false, 0
+  local Stellungen = {}
+
+  -- Halt am Hauptsignal
+  if Teile["A"] or Teile["B"] then
+    table.insert(Stellungen, {"Hp0"})
+  end
+
+  -- Halt erwarten
+  -- ... am Wiederholer 
+  if Teile["VSigWdh"] then
+    table.insert(Stellungen, {"Ks2","Kl"})
+  end
+  -- ... An MAS oder Vorsignalen
+  if Teile["MAS"] or Teile["VSig"] then
+    if Teile["verkuerzt"] then
+      table.insert(Stellungen, {"Ks2","Kl"})
     end
-    return true, Vmax
+    table.insert(Stellungen, {"Ks2"})
+    if Teile["Kl"] then
+      table.insert(Stellungen, {"Ks2","Kl"})
+    end
   end
-  -- Funktion fuer Kontaktpunkte: Zug an Signal anmelden
-  _G["Anmeldung_"..tostring(Signal)] = function(Zug)
-    local Anmeldung
-    Anmeldung = ladeTabelle(Signal)
-    if Anmeldung.train and Anmeldung.train ~= Zug then return end
-    Anmeldung.train = Zug
-    speicherTabelle(Signal, Anmeldung)
+
+  -- Fahrt/Fahrt erwarten
+  table.insert(Stellungen, {"Ks1"})
+
+  -- Langsamfahrt erwarten
+  -- ... am Wiederholer
+  if Teile["VSigWdh"] then
+    table.insert(Stellungen, {"Ks1bl","Kl"})
   end
-  -- Auftragsstatus pollen
-  MainFunktion(function()
-    local Anmeldung = ladeTabelle(Signal)
-    -- Wenn Zug vor Signal steht, Anmeldung ggf. nachholen
-    if EEPGetSignalTrainsCount(Signal) > 0 then
-      if Anmeldung.train == nil then
-        Anmeldung.train = EEPGetSignalTrainName(Signal, 1)
-        speicherTabelle(Signal, Anmeldung)
+  -- ... am MAS oder Vorsignalen
+  if Teile["MAS"] or Teile["VSig"] or Teile["VSigWdh"] then
+    if Teile["verkuerzt"] then
+      table.insert(Stellungen, {"Ks1bl","Kl"})
+    end
+    table.insert(Stellungen, {"Ks1bl"})
+    if Teile["Kl"] then
+      table.insert(Stellungen, {"Ks1bl","Kl"})
+    end
+  end
+
+  -- Rangierfahrt an Ausfahrsignalen
+  if Teile["A"] then
+    table.insert(Stellungen, {"Sh1"})
+  end
+
+  -- Ersatzfahrt an Ausfahrsignalen und Blocksignalen ohne Vorsichtssignal
+  if Teile["A"] or (Teile["B"] and not Teile["V"]) then
+    table.insert(Stellungen, {"Zs1"})
+  end
+
+  -- Vorsichtssignal an Hauptsignalen
+  if Teile["V"] then
+    table.insert(Stellungen, {"Zs7"})
+  end
+
+  -- Kennlicht
+  if Teile["Kl"] or Teile["VSigWdh"] or Teile["verkuerzt"] then
+    table.insert(Stellungen, {"Kl"})
+  end
+
+  -- Dunkel geschaltet
+  table.insert(Stellungen, {})
+  return Stellungen
+end
+
+local GK3KsBauarten={
+  "Ks_Sig_A",
+  "Ks_Sig_A_MAS",
+  "Ks_Sig_A_MAS_Kl",
+  "Ks_Sig_A_V",
+  "Ks_Sig_A_V_MAS",
+  "Ks_Sig_A_V_MAS_Kl",
+  "Ks_Sig_B",
+  "Ks_Sig_B_MAS",
+  "Ks_Sig_B_V",
+  "Ks_Sig_B_V_MAS",
+  "Ks_Sig_B_V_MAS_Kl",
+  "Ks_Sig_VSig",
+  "Ks_Sig_VSigWdh",
+  "Ks_Sig_VSig_verkuerzt"
+}
+
+for cnt=1, #GK3KsBauarten do
+  _G[GK3KsBauarten[cnt]]=function(Signal, Meta)
+    -- Falls kein name gegeben, einen generieren
+    if Meta.Name == nil then
+      Meta.Name = string.format("%d", Signal)
+    end
+    Meta.Kennziffer = Kennziffer
+    Meta.Begriffe = GK3KsBegriffe(GK3KsBauarten[cnt])
+    for _, Var in ipairs({"Schild","Mastschild","Immobilie", "PZB"}) do
+      if type(Meta[Var]) == "number" then
+        Meta[Var]=tostring("#"..Meta[Var])
       end
-      -- Ankunftszeit merken, sobald Zug am Signal angekommen ist
-      -- Wird im if von EEPGetSignalTrainsCount gemacht,
-      --   damit nur Halte an diesem Signal zaehlen
-      if Anmeldung.arrival == nil then
-        ok, speed = EEPGetTrainSpeed(Anmeldung.train)
-        if math.abs(speed) < 5 then
-          Anmeldung.arrival = EEPTime
-          speicherTabelle(Signal, Anmeldung)
+      if Meta[Var] then
+        local ok,x,y,z = EEPStructureGetPosition(Meta[Var])
+        if ok then
+          if not Meta.Ort then
+            Meta.Ort = {x,y,z}
+          end
+        else
+          print("Warnung: Signal ",Signal," ",Var," ",Meta[Var]," nicht gefunden")
         end
       end
     end
-    -- Nichts tun wenn kein Zug da
-    if Anmeldung.train == nil then return end
-    -- SchaltFunk
-    if SchaltFunk and EEPGetSignal(Signal) == Haltstellung then
-      r=SchaltFunk(Anmeldung.train)
-      if r and r > 0 and r ~= Haltstellung then
-        EEPSetSignal(Signal, r, 1)
-      end
+    if not Meta.Ort then
+      print("Warnung: Signal ",Signal," hat keine Immobilie, um die eigene Position zu ermitteln")
     end
-  end)
-  -- Reaktion auf Signal-Umstellungen
-  SignalFunktion(Signal, function(Stellung)
-    if Stellung == Haltstellung then
-      -- Wenn Signal auf Halt gestellt wurde, mache eine Abmeldung
-      if AbmeldeFunk then
-        local Anmeldung = ladeTabelle(Signal)
-        AbmeldeFunk(Anmeldung.train)
-      end
-      speicherTabelle(Signal, {})
+    KsSignale[Signal] = Meta
+    if Meta.Schild then
+      EEPStructureSetTextureText(Meta.Schild, 1, Meta.Kennziffer)
+      EEPStructureSetTextureText(Meta.Schild, 2, Meta.Name)      
     end
-  end)
-end
-
--- Funktion zum Erklaeren, was ein Signal gerade so tut
--- Nimmt die Nummer des Signals als Argument
--- Gibt einen Menschenlesbaren Text zurueck
-function SignalBeschreibung(Signal)
-  local Anmeldung = ladeTabelle(Signal)
-  local Fahrt, V = SignalLesenFunktionen[Signal]()
-  Text = "Signal " .. tonumber(Signal) .. ": "
-  if Fahrt then
-    if V < Vmax then
-      Text = Text .. "Fahrt mit " .. tonumber(V) .. " Km/h\n"
-    else
-      Text = Text .. "Fahrt\n"
-    end
-  else
-    Text = Text .. "Halt\n"
   end
-  if Anmeldung.train then
-    Text = Text .. "Zug angemeldet: " .. Anmeldung.train .. "\n"
-  end
-  if Anmeldung.arrival then
-    local Dauer = EEPTime - Anmeldung.arrival
-    if Dauer < 0 then Dauer = Dauer + 24*60*60 end
-    Text = Text .. "Ankunft vor " .. Dauer .. " Sekunden\n"
-  end
-  return Text
 end
