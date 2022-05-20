@@ -9,8 +9,17 @@ KsKit enthält Steuer-Code für ESTW-basierende Strecken- und Bahnhofsanlagen.
 Epochenmäßig liegt der Fokus auf Bahnanlagen der Epoche VI.
 Die Vorbildsituation ist dem Bahnhof Bad Schandau entnommen.
 
-Der Hauptanwendungsfall sind Anlagen mit realistischen Entfernungen und vorbildnaher Streckenausstattung.
-Daher enthält die Dokumentation auch Richtlinien zur Platzierung der Streckenaustattung.
+Der Hauptanwendungsfall sind Anlagen mit realistischen Entfernungen und vorbildexakter Streckenausstattung.
+Daher enthält die Dokumentation auch Richtlinien zur Platzierung der Streckenaustattung, obwohl diese für die Zugsicherheit in EEP nicht notwendig sind.
+
+Als Referenz diente das Buch "Sicherung des Schienenverkehrs" von Ulrich Maschek / Springer Vieweg.
+
+Es ist zu beachten, das übermäßiger Perfektionismus bei dem Ausgestalten der Anlage hinderlich sein kann.
+Mit vorbildnaher Detailierheit nimmt die Bauzeit dann auch vorbildnahe Dimensionen an.
+In dieser Dokumentation werden viele Anordnungen des Vorbilds erklärt.
+Wenn man diese dann Verstanden hat, wird man sie natürlich auf der eigenen Anlage nachbilden wollen.
+Hier sollte der EEP-Bahner in der Lage sein, einen Schlussstrich zu ziehen, ab wo man sich mit der Vorbildnähe zufrieden gibt.
+Im Zweifel dann lieber auf die Streckenausstattung verzichten, man will ja noch zu Lebzeiten fertigwerden.
 
 ## Übersicht über ähnliche Werke
 
@@ -33,14 +42,11 @@ Das RUS ist gut geeignet für Lua-Bastler, welche Wert auf einen komplexen Bahnb
 KsKit basiert wie RUS auf den EEP-Fahrstrassen, ist aber auf die Ansteuerung von den Ks-Signalen von GK3 konzentriert.
 Anders als bei den anderen beiden Frameworks werden Signale und Fahrwege nicht über eine Tabelle, sondern über Funktionsaufrufe bei der Lua-Initialisierung definiert.
 Dabei sind sehr viele Informationen anzugeben, welche dann aber auch Signalschaltungen ermöglichen, welche bei RUS und ATC nicht möglich sind.
-KsKit empfiehlt sich für EEP-Bahner, welche auf ihrer Anlage eine vorbildgerechte Vor- und Mehrabschnittsignalisierung realisieren wollen.
+KsKit empfiehlt sich für anspruchsvolle EEP-Bahner, welche auf ihrer Anlage eine vorbildgerechte Vor- und Mehrabschnittsignalisierung realisieren wollen.
 Fortgeschrittene Erfahrungen mit Lua sind dafür unerlässlich.
-Ebenfalls ist die Lektüre von "Sicherung des Schienenverkehrs", Ulrich Maschek, Springer Vieweg zu empfehlen.
+Ebenfalls hilfreich sind Kenntnisse bezüglich der Sicherung des Schienenverkehrs.
 
-Diese Dokumentation behandelt ausschließlich KsKit.
-Die Sektionen für die vorbildgerechte Platzierung der Streckenaustattung und Kontakte sind unabhängig von der verwendeten Lua-Lösung lesenswert.
-
-## Einrichtung
+## Installation und Einrichtung
 
 Das KsKit-Verzeichnis wird im EEP-Stammverzeichnis, dort im LUA/ Unterverzeichnis als ganzes hin entpackt.
 
@@ -50,6 +56,49 @@ Die Einbindung vom Anlagenscript aus erfolgt mittels `require("kskit")`.
 
 Findet EEP die Dateien von Lua nicht, wird im Ereignisfenster eine Liste von Pfaden ausgegeben, an denen die Dateien gesucht wurden.
 Diese Pfade sind in diesem Fall mit dem Installationspfad abzugleichen.
+
+## Streckenausstattung
+
+### PZB-Magnete
+
+PZB-Magnete sind eigentlich keine Magnete, sondern Spulen, und damit elektisch An- und Abschaltbar.
+Im Vorbild lösen sie im Zug entweder eine Geschwindigkeitsüberwachung oder eine Zwangsbremsung aus.
+Ziel der PZB ist es, das Durchführen des Bremsens vor einem Haltzeigenden Signal zu überwachen.
+
+![PZB-Kontakt mit Anschlusskasten. Auf dem Gleis darüber befindet sich eine TRAXX, deren PZB-Empfänger gut zu sehen ist](img/pzb.png)
+
+Modelle von PZB-Magneten gibt es in vielen Sets.
+Im Bild ist der Magnet aus dem Set V15NRI10036 zu sehen.
+Der Magnet ist immer in Fahrtrichtung rechts vom Gleis.
+
+Dazu gehört auch ein kleiner Anschlusskasten.
+Der Anschlusskasten ist in der Regel auf der Seite zum Kabelkanal hin, dies ist nicht immer die selbe Seite wie vom Magneten selbst.
+Im Bild ist "Anschlusskasten 3 alt" aus dem Set V70NMA10002 dargestellt.
+Aus diesem Set stammen auch die Kabelkanäle und Anschlusskabel.
+Der Anschlusskasten der PZB-Magnete ist kleiner als der Anschlusskasten der Achszähler.
+
+Auf die Position von PZB-Magneten wird in der Sektion zu den Hauptsignal genauer eingegangen.
+
+### Achszähler
+
+Ein Achszähler detektiert die Anzahl und die Richtung durchfahrender Achsen.
+Der Schienenkontakt des Achszählers ist nicht sehr groß und damit leicht zu übersehen.
+Vermutlich gibt es deswegen auch keine EEP Modelle dafür.
+Besser zu sehen sind die Kabel und der Anschlusskasten.
+
+![Achzaehler mit Anschlusskasten](img/achszaehler.png)
+
+Als Anschlusskasten kann der "Anschlusskasten 2 alt" aus dem Set V70NMA10002 verwendet werden.
+Dieser ist aufgrund der eingebauten Baugruppe zur Signalaufbereitung sichtbar größer als der Anschlusskasten der PZB-Magnete.
+Wie bei dem PZB-Magnet ist der Anschlusskasten normalerweise auf der Seite zum Kabelkanal hin.
+
+Der Achszähler stellt die Grenze zwischen zwei Gleismeldeabschnitten dar.
+Im Vorbild wird durch die Differenz der Achszähler an den beiden Enden eines Gleismeldeabschnittes festgestellt, ob dieser besetzt ist oder nicht.
+Ändert sich der Besetztzustand eines Gleismeldeabschnittes, können abhängig davon Signale geschaltet werden.
+
+In EEP werden anstelle Gleisbesetztmeldung Schaltkontakte verwendet.
+Es wird in späteren Sektionen immer wieder vorkommen, das Schaltkontakte für bestimmte Aufgaben an die Position eines Achszählers zu setzen sind.
+Daher bietet es sich sich an, jegliche Achszähler mit einem Gruppenkontakt zu versehen.
 
 ## Platzierung von Hauptsignalen
 
