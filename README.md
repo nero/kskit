@@ -5,12 +5,40 @@ title: KsKit für Eisenbahn.exe
 
 # KsKit für Eisenbahn.exe
 
-KsKit ist eine Sammlung von Lua-Funktionalität, welche ich auf meinen Anlagen für eine vorbildgerechte Signalisierung einsetze.
-Die hier geschilderten Anwendungsfälle und Programmschnipsel stellen kein Komplettpacket dar, sondern sind eher wie ein Kuchen anzusehen, aus denen man sich ein paar Rosinen herauspicken darf.
-Mehrere Anwendungsfälle benötigen überhaupt keinen Lua-Code und sind auch ohne KsKit anwendbar.
+KsKit enthält Steuer-Code für ESTW-basierende Strecken- und Bahnhofsanlagen.
+Epochenmäßig liegt der Fokus auf Bahnanlagen der Epoche VI.
+Die Vorbildsituation ist dem Bahnhof Bad Schandau entnommen.
 
-Aus dem Basisscript dürfen Teile entnommen werden und anderswo verwendet werden, dabei ist die Herkunft und Versionsnummer zu nennen, z.B. als Quellcode-Kommentar.
-Die Versionsnummer befindet sich am Anfang des Basisscripts und kann über die Variable `KsKitVer` abgefragt werden.
+Der Hauptanwendungsfall sind Anlagen mit realistischen Entfernungen und vorbildnaher Streckenausstattung.
+Daher enthält die Dokumentation auch Richtlinien zur Platzierung der Streckenaustattung.
+
+## Übersicht über ähnliche Werke
+
+["Automatic Train Control"](https://github.com/FrankBuchholz/EEP-LUA-Automatic-Train-Control) von Frank Buchholz und RudyB ist eine jüngere Lösung.
+Hier merkt sich Lua, welche Weichen und Signale durch den Fahrweg eines Zuges blockiert sind.
+Über eine Browseranwendung lassen die Definitionen für Lua direkt aus der Anlagendatei generieren.
+Die Ausstattung der Strecken mit Fahrstraßensignalen und Kontakten ist nur minimal notwendig.
+Die Dokumentation erfolgt über eine mitgelieferte PDF.
+ATC eignet sich am besten für EEP-Bahner, welche nicht die Zeit oder Energie haben, sich in Lua einzuarbeiten.
+
+Das Rundum-Sorglos-Packet von Parry36 ist die alteingewachsene Lösung.
+Über die EEP-Eigenen Fahrstraßen wird hier die Zugsicherung realisiert.
+Die Signale und Fahrstraßen werden über Tabellen ins Lua eingetragen.
+Signalbeeinflussung findet über Kontakte statt.
+Auf Youtube gibt es eine Anzahl von Video-Tutorials, wo man ihm beim Anwenden von RUS zusehen und nachmachen kann.
+Allerdings sind dafür schon einige Lua-Kenntnisse notwendig.
+Teile des RUS, z.B. die P36_Toolbox, sind auch alleinstehend nutzbar.
+Das RUS ist gut geeignet für Lua-Bastler, welche Wert auf einen komplexen Bahnbetrieb legen.
+
+KsKit basiert wie RUS auf den EEP-Fahrstrassen, ist aber auf die Ansteuerung von den Ks-Signalen von GK3 konzentriert.
+Anders als bei den anderen beiden Frameworks werden Signale und Fahrwege nicht über eine Tabelle, sondern über Funktionsaufrufe bei der Lua-Initialisierung definiert.
+Dabei sind sehr viele Informationen anzugeben, welche dann aber auch Signalschaltungen ermöglichen, welche bei RUS und ATC nicht möglich sind.
+KsKit empfiehlt sich für EEP-Bahner, welche auf ihrer Anlage eine vorbildgerechte Vor- und Mehrabschnittsignalisierung realisieren wollen.
+Fortgeschrittene Erfahrungen mit Lua sind dafür unerlässlich.
+Ebenfalls ist die Lektüre von "Sicherung des Schienenverkehrs", Ulrich Maschek, Springer Vieweg zu empfehlen.
+
+Diese Dokumentation behandelt ausschließlich KsKit.
+Die Sektionen für die vorbildgerechte Platzierung der Streckenaustattung und Kontakte sind unabhängig von der verwendeten Lua-Lösung lesenswert.
 
 ## Einrichtung
 
@@ -20,10 +48,8 @@ Das KsKit-Verzeichnis wird im EEP-Stammverzeichnis, dort im LUA/ Unterverzeichni
 
 Die Einbindung vom Anlagenscript aus erfolgt mittels `require("kskit")`.
 
-**Wichtig**: Wenn KsKit verwendet wird, darf keine EEPMain definiert sein. 
-
-Findet EEP die Dateien von Lua nicht, wird im Ereignisfenster eine Liste von Orten ausgegeben, an denen die Dateien gesucht wurden.
-Die Orte sind in diesem Fall mit dem Installationsort abzugleichen.
+Findet EEP die Dateien von Lua nicht, wird im Ereignisfenster eine Liste von Pfaden ausgegeben, an denen die Dateien gesucht wurden.
+Diese Pfade sind in diesem Fall mit dem Installationspfad abzugleichen.
 
 ## Platzierung von Hauptsignalen
 
@@ -120,3 +146,37 @@ Für eine Vorbildgerechte Ansteuerung muss hier auf Lua zurückgegriffen werden.
 #### Blocksignale
 
 ### Mehrabschnittssignale
+
+
+## EEPMain und Callbacks
+
+KsKit übernimmt die Entgegennahme sämtlicher Callbacks und erlaubt es, mehrere Funktionen durch einen EEP-Callback auszuführen.
+
+Das bedeutet allerdings auch, das im Anlagenscript keine EEPMain, EEPOnSignal und EEPOnSwitch zu definieren sind.
+Als Ersatz dafür bietet KsKit eine eigene Schnittstelle an:
+
+```
+Main(function()
+  print("Main")
+  -- return-Wert von hier wird ignoriert
+end)
+
+OnSignal(1, function(Stellung)
+  print("Signal 1 zeigt jetzt Stellung ", Stellung)
+end)
+
+OnSwitch(2, function(Stellung)
+  if Stellung == 1 then
+    print("Weiche 2 ist auf Durchfahrt gestellt")
+  elseif Stellung == 2 then
+    print("Weiche 2 ist auf Abzweig gestellt")
+  elseif Stellung == 3 then
+    print("Weiche 2 ist auf Coabzweig gestellt")
+  end
+end)
+```
+
+Auf diese Art definierte Callbacks dürfen beliebig wiederholt werden.
+Ruft EEP den Callback auf, werden alle dazu eingetragenen Funktionen aufgerufen.
+
+Die Anmeldung bei EEP durch die `EEPRegister...` Funktionen wird von KsKit automatisch vorgenommen.
