@@ -2,7 +2,7 @@
 -- Ich weiss jetzt noch nicht, wie viele verschiedene Versionen von dem Script spaeter herumfliegen werden.
 KsKitVer=0
 
-Kennziffer=34
+Kennzahl=34
 
 local Callbacks = {}
 
@@ -55,37 +55,16 @@ end
 
 -- Signal-Callback registrieren
 function OnSignal(Signal, Funktion)
-  EEPRegisterSignal(Signal)
   On("EEPOnSignal_"..tostring(Signal), Funktion)
 end
 
 -- Weichen-Callbacks registrieren
 function OnSwitch(Switch, Funktion)
-  EEPRegisterSwitch(Switch)
   On("EEPOnSwitch_"..tostring(Switch), Funktion)
 end
 
--- Lua-Serializer und Deserializer laden
-serpent=require("kskit/serpent")
-
--- Lua-Tabelle aus EEP Slot laden
-function ladeTabelle(Slot)
-  local roh, geparst
-  ok, roh = EEPLoadData(Slot)
-  if not ok then return {} end
-  ok, geparst = serpent.load(roh)
-  if not ok then return {} end
-  if type(geparst) ~= "table" then return {} end
-  return geparst
-end
-
--- Lua-Tabelle in EEP Slot speichern
-function speicherTabelle(Slot, Tabelle)
-  EEPSaveData(Slot, serpent.line(Tabelle, {comment = false}))
-end
-
 -- Referenz-Datenbank mit Signalen, Fahrstrassen & Weichen
--- Geordnet nach Signal/Weichen-ID
+-- Geordnet nach Signal-ID
 KsSignale = {}
 
 -- KsSignale von GK3 sind sehr systematisch benannt, die moeglichen Stellungen lassen sich aus dem Namen herleiten
@@ -141,7 +120,7 @@ function GK3KsBegriffe(Modell)
     table.insert(Stellungen, {"Sh1"})
   end
 
-  -- Ersatzfahrt an Ausfahrsignalen und Blocksignalen ohne Vorsichtssignal
+  -- Ersatzsignal an Ausfahrsignalen und Blocksignalen ohne Vorsichtssignal
   if Teile["A"] or (Teile["B"] and not Teile["V"]) then
     table.insert(Stellungen, {"Zs1"})
   end
@@ -179,35 +158,27 @@ local GK3KsBauarten={
 }
 
 for cnt=1, #GK3KsBauarten do
-  _G[GK3KsBauarten[cnt]]=function(Signal, Meta)
+  _G[GK3KsBauarten[cnt]]=function(Meta)
+    Signal=Meta[1]
+    Meta[1] = nil
     -- Falls kein name gegeben, einen generieren
     if Meta.Name == nil then
       Meta.Name = string.format("%d", Signal)
     end
-    Meta.Kennziffer = Kennziffer
+    if type(Meta.Schild) == "number" then
+      Meta.Schild="#"..tostring(Meta.Schild)
+    end
+    Meta.Kennzahl = Kennzahl
     Meta.Begriffe = GK3KsBegriffe(GK3KsBauarten[cnt])
-    for _, Var in ipairs({"Schild","Mastschild","Immobilie", "PZB"}) do
-      if type(Meta[Var]) == "number" then
-        Meta[Var]=tostring("#"..Meta[Var])
-      end
-      if Meta[Var] then
-        local ok,x,y,z = EEPStructureGetPosition(Meta[Var])
-        if ok then
-          if not Meta.Ort then
-            Meta.Ort = {x,y,z}
-          end
-        else
-          print("Warnung: Signal ",Signal," ",Var," ",Meta[Var]," nicht gefunden")
-        end
-      end
-    end
-    if not Meta.Ort then
-      print("Warnung: Signal ",Signal," hat keine Immobilie, um die eigene Position zu ermitteln")
-    end
     KsSignale[Signal] = Meta
-    if Meta.Schild then
-      EEPStructureSetTextureText(Meta.Schild, 1, Meta.Kennziffer)
-      EEPStructureSetTextureText(Meta.Schild, 2, Meta.Name)      
+  end
+end
+
+function KsSignalBezeichner()
+  for Signal, Meta in ipairs(KsSignale) do
+    if Meta.Schild ~= nil then
+      EEPStructureSetTextureText(Meta.Schild, 1, Meta.Kennzahl)
+      EEPStructureSetTextureText(Meta.Schild, 2, Meta.Name)
     end
   end
 end
