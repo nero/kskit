@@ -63,8 +63,15 @@ function OnSwitch(Switch, Funktion)
   On("EEPOnSwitch_"..tostring(Switch), Funktion)
 end
 
--- Referenz-Datenbank mit Signalen, Fahrstrassen & Weichen
--- Geordnet nach Signal-ID
+-- Datenbank fuer Tabelle
+KsFahrstrassen = {}
+
+-- Fahrstrasse in Datenbank aufnehmen
+function FS(Tabelle)
+  KsFahrstrassen[Tabelle[1]] = Tabelle
+end
+
+-- Datenbank fuer Signale
 KsSignale = {}
 
 -- KsSignale von GK3 sind sehr systematisch benannt, die moeglichen Stellungen lassen sich aus dem Namen herleiten
@@ -174,8 +181,8 @@ for cnt=1, #GK3KsBauarten do
   end
 end
 
-function KsSignalBezeichner()
-  for Signal, Meta in ipairs(KsSignale) do
+function KsKitInit()
+  for Signal, Meta in pairs(KsSignale) do
     if Meta.Schild ~= nil then
       EEPStructureSetTextureText(Meta.Schild, 1, Meta.Kennzahl)
       EEPStructureSetTextureText(Meta.Schild, 2, Meta.Name)
