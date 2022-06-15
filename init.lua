@@ -2,66 +2,96 @@
 -- Ich weiss jetzt noch nicht, wie viele verschiedene Versionen von dem Script spaeter herumfliegen werden.
 KsKitVer=0
 
-Kennzahl=34
+-- Grundsätzliche Typen von Signalbildern
+FAHRT=1
+HALT=2
+RANGIERFAHRT=3
+ERSATZFAHRT=4
+AUS=5
 
-local Callbacks = {}
+-- Signalbilder des Hv-Signalsystems
+Hp0={HALT}
+Hp1={FAHRT}
+Hp2={FAHRT, V_max=40}
+Vr0={FAHRT, H_erwarten=true}
+Vr1={FAHRT}
+Vr2={FAHRT, V_erwarten=40}
 
-function On(Name, Funktion)
-  -- Erlaube es, Signal und Weichen via Nummer zu referenzieren
-  if type(Name) == "number" then
-    if EEPGetSwitch(Name) > 0 then
-      Name = "EEPOnSwitch_"..tostring(Name)
-    elseif EEPGetSignal(Name) > 0 then
-      Name = "EEPOnSignal_"..tostring(Name)
+-- Signalbilder OSJD/EZMG/Hl-Signale des Ostblocks
+-- V_erwarten=60 wird durch V_erwarten=40 signalisiert
+Hl1={FAHRT}
+Hl2={FAHRT, V_max=100}
+Hl3a={FAHRT, V_max=40}
+Hl3b={FAHRT, V_max=60}
+Hl4={FAHRT, V_erwarten=100}
+Hl5={FAHRT, V_max=100, V_erwarten=100}
+Hl6a={FAHRT, V_max=40, V_erwarten=100}
+Hl6b={FAHRT, V_max=60, V_erwarten=100}
+Hl7={FAHRT, V_erwarten=40}
+Hl8={FAHRT, V_max=100, V_erwarten=40}
+Hl9a={FAHRT, V_max=40, V_erwarten=40}
+Hl9b={FAHRT, V_max=60, V_erwarten=40}
+Hl10={FAHRT, H_erwarten=true}
+Hl11={FAHRT, V_max=100, H_erwarten=true}
+Hl12a={FAHRT, V_max=40, H_erwarten=true}
+Hl12b={FAHRT, V_max=60, H_erwarten=true}
+Hl13={HALT}
+
+-- Zusatzsignale (DS 301 Namen)
+Zs1={ERSATZFAHRT}
+Sh1={RANGIERFAHRT} -- war Ra12 bei DR
+
+-- Signalebilder der jeweiligen Signalmodelle
+Signalmodelle={
+  -- V11NHK10024 HL-Signale der DR *V40* - Grundset
+  ["Hl_Signal_Ausfahrt_V40_HK1"]={ Hl13,Hl1,Hl3a,Zs1,Sh1,Hl13 },
+  ["Hl_Signal_Ausfahrt_Vmax_HK1"]={ Hl13,Hl1,Zs1,Sh1,Hl13 },
+  ["Hl_Signal_Block_HK1"]={ Hl13,Hl1,Zs1,Hl13 },
+  ["Hl_Signal_Einfahrt_V40_HK1"]={ Hl13,Hl1,Hl7,Hl10,Hl3a,Hl9a,Hl12a,Zs1,Hl13 },
+  ["Hl_Signal_Selbstblock_HK1"]={ Hl13,Hl1,Hl10,Hl13 },
+  ["Hl_Signal_Vorsignal_V40_HK1"]={ Hl10,Hl7,Hl1 },
+  ["Hl_Signal_Vorsignalwiederholer_V40_HK1"]={ Hl10,Hl7,Hl1 },
+  -- V11NHK10025 HL-Signale der DR *V60* - Erweiterungsset
+  ["Hl_Signal_Ausfahrt_V60_HK1"]={ Hl13,Hl1,Hl3b,Hl3a,Zs1,Sh1,Hl13 },
+  ["Hl_Signal_Einfahrt_V60_HK1"]={ Hl13,Hl1,Hl4,Hl7,Hl10,Hl3b,Hl6b,Hl9b,Hl12b,Hl3a,Hl6a,Hl9a,Hl12a,Zs1,Hl13 },
+  ["Hl_Signal_Vorsignalwiederholer_V60_HK1"]={ Hl10,Hl7,Hl1 }
+}
+
+--
+Signalmeta = {}
+
+Signalmeta.__call= function(table, data)
+  local sigobj = {}
+  local mt = {}
+  mt.__index = table
+  setmetatable(sigobj, mt)
+  for k, v in pairs(data) do
+    local setter = "set_"..tostring(k)
+    if type(sigobj[setter]) == "function" then
+      sigobj[setter](sigobj, v)
+    else
+      error("Invalid signal property "..tostring(k))
     end
   end
-  if type(Name) == "table" then
-    for _, Newname in pairs(Name) do
-      On(Newname, Funktion)
-    end
-    return
-  end
-  if type(Name) ~= "string" or string.match(Name, "EEP.+") == nil then
-    print("Verweigere Callback von "..type(Name).." "..tostring(Name))
-    return
-  end
-  if not Callbacks[Name] then
-    Callbacks[Name] = {}
-    if _G[Name] ~= nil then
-      print("Warnung: "..Name.."() von KsKit adoptiert")
-      table.insert(Callbacks[Name], _G[Name])
-    end
-    _G[Name] = function(...)
-      for cnt = 1, #Callbacks[Name] do
-        Callbacks[Name][cnt](...)
-      end
-      -- Nur EEPMain braucht dies, aber dringends
-      return 1
-    end
-    -- Bei Weichen und Signalen muss EEP vorher informiert werden
-    -- Item ist normal "Switch" oder "Signal"
-    local Item, Number = string.match(Name, 'EEPOn(.+)_(%d+)')
-    if Number ~= nil then
-      _G["EEPRegister"..Item](Number)
-    end
-  end
-  table.insert(Callbacks[Name], Funktion)
+  return sigobj
 end
 
--- EEPMain-Callback registrieren
-function Main(Funktion)
-  On("EEPMain", Funktion)
+-- Basisklasse fuer alle Signale
+-- Entspricht den Signalen von vor EEP 6: Stellung 1 ist Fahrt, Stellung 2 ist Halt
+Basissignal = {
+  Begriffe = { Hp1, Hp0 }
+}
+setmetatable(Basissignal, Signalmeta)
+
+function Basissignal:set_1(v)
+  if type(v) ~= "number" then
+    error("Signal ID must be number")
+  end
+  self.ID = v
 end
 
--- Signal-Callback registrieren
-function OnSignal(Signal, Funktion)
-  On("EEPOnSignal_"..tostring(Signal), Funktion)
-end
-
--- Weichen-Callbacks registrieren
-function OnSwitch(Switch, Funktion)
-  On("EEPOnSwitch_"..tostring(Switch), Funktion)
-end
+USignal = {}
+setmetatable(USignal, Signalmeta)
 
 -- Datenbank fuer Tabelle
 KsFahrstrassen = {}
