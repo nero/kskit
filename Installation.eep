@@ -1,0 +1,6 @@
+[Install_00]
+Name_GER	 = "KsKit v1.1"
+Name_ENG	 = "KsKit v1.1"
+Desc_GER	 = "Script-Kollektion von Nero"
+Desc_ENG	 = "Nero's script collection"
+Script	 = "Install_00\Install.ini"
