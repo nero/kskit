@@ -42,7 +42,7 @@ function Prototype:__tostring()
       end
     end
     return "{"..r.."}"
-  elseif t=="number" then
+  elseif t=="number" or t=="boolean" then
     return tostring(self)
   elseif t=="string" then
     return "\""..self:gsub("\\","\\\\"):gsub("\"","\\\"").."\""
