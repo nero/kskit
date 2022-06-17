@@ -25,7 +25,7 @@ function Prototype:__tostring()
     -- load and sort table keys
     local tkeys={}
     for k in pairs(self) do table.insert(tkeys, k) end
-    table.sort(tkeys)
+    table.sort(tkeys, function(a,b) return tostring(a)<tostring(b) end)
     -- iterate over our table
     for _,k in ipairs(tkeys) do
       local v = Prototype.__tostring(self[k])
