@@ -45,7 +45,7 @@ function Prototype:__tostring()
   elseif t=="number" or t=="boolean" then
     return tostring(self)
   elseif t=="string" then
-    return "\""..self:gsub("\\","\\\\"):gsub("\"","\\\"").."\""
+    return ("%q"):format(self)
   else
     return "nil"
   end
