@@ -1,3 +1,6 @@
+require("BetterContacts_BH2"){printErrors=true, deprecatedUseGlobal=true}
+require("Begriffe")
+
 -- Tabelle in einen String umwandeln, rekursiv
 -- Funktionswerte werden ignoriert
 function __tostring(self)
@@ -111,9 +114,6 @@ function AnimiereZugStromabnehmer(Zug, Richtung)
   end
 end
 
-FAHRT=1
-HALT=2
-
 function leseSignal(Signal)
   if EEPGetSignal(Signal) == 1 then
     return {FAHRT}
@@ -123,7 +123,8 @@ function leseSignal(Signal)
 end
 
 local GefundeneSignale={}
-local Zugaktionen={}
+local Zugaktionen=ladeTabelle(1)
+local SignalChanged={}
 
 setmetatable(Zugaktionen, {
   __index=function(table, key)
@@ -134,7 +135,6 @@ setmetatable(Zugaktionen, {
 
 function KsKitInit()
   GefundeneSignale={}
-  Zugaktionen=ladeTabelle(1)
 
   for Signal=1,1000 do
     if EEPGetSignal(Signal) > 0 and EEPGetSignal(Signal+1000) > 0 then
@@ -144,14 +144,16 @@ function KsKitInit()
 
   for i=1,#GefundeneSignale do
     local Signal = GefundeneSignale[i]
+    local FSignal = Signal + 1000
     EEPRegisterSignal(Signal)
     _G["EEPOnSignal_"..tostring(Signal)]=function(Stellung)
-
+      SignalChanged[Signal]=true
     end
-    EEPRegisterSignal(Signal+1000)
-    _G["EEPOnSignal_"..tostring(Signal+1000)]=function(FStellung)
+    EEPRegisterSignal(FSignal)
+    _G["EEPOnSignal_"..tostring(FSignal)]=function(FStellung)
+      SignalChanged[FSignal]=true
       if FStellung > 1 then
-        print("Fahrstrasse ",string.format("%04d-%02d", Signal+1000, FStellung-1)," geschalten")
+        print("Fahrstrasse ",string.format("%04d-%02d", FSignal, FStellung-1)," geschalten")
       end
     end
   end
@@ -174,90 +176,92 @@ function KsKitMain()
   local SignalHaltegruende = {}
 
   for Zugname, Data in pairs(Zugaktionen) do
-    local ok, V = EEPGetTrainSpeed(Zugname)
-    if ok then
-      local Haltegrund = "Kein Plan"
-
-      -- Wenn wir stehen, merken wir uns unsere Ankunftszeit
-      if V > -5 and V < 5 then
-        if Zugaktionen[Zugname].A == nil then
-          Zugaktionen[Zugname].A = EEPTime
-          if Zugaktionen[Zugname].V then
-            EEPSetTrainSpeed(Zugname, 0)
-            if Zugaktionen[Zugname].R then
-              AnimiereZugStromabnehmer(Zugname, 0)
-            end
-          end
-        end
-      -- Ankunftszeit loeschen falls wir unterwegs sind
-      elseif Zugaktionen[Zugname].A then
-        Zugaktionen[Zugname].A = nil
-        Zugaktionen[Zugname].S = nil
-        Zugaktionen[Zugname].R = nil
-        Zugaktionen[Zugname].V = nil
-      end
-
-      if Zugaktionen[Zugname].W then
-        Haltegrund = "Planhalt"
-      end
-
-      -- Wartezeit loeschen falls abgesessen
-      if Zugaktionen[Zugname].W and Zugaktionen[Zugname].A then
-        local Wartedauer = EEPTime - Zugaktionen[Zugname].A
-        if Wartedauer < 0 then
-          Wartedauer = Wartedauer + 24*60*60
-        end
-        if Wartedauer > Zugaktionen[Zugname].W then
-          Zugaktionen[Zugname].W = nil
-        end
-      end
-
-      -- Fahrstrasse schalten
-      if not Zugaktionen[Zugname].W and Zugaktionen[Zugname].S then
-        local ZSignal = Zugaktionen[Zugname].S
-        local FSignal = ZSignal + 1000
-        local Fahrstrassen = {}
-        if Zugaktionen[Zugname].FS then
-          Fahrstrassen = Zugaktionen[Zugname].FS
-        elseif Selbstblock_Default then
-          Fahrstrassen = {1}
-        end
-        if #Fahrstrassen > 0 then
-          if EEPGetSignal(FSignal) == 1 then
-            Schaltauftraege[FSignal] = 1+Fahrstrassen[math.random(#Fahrstrassen)]
-          end
-          Haltegrund = "FS angefordert"
-        end
-      end
-
-      -- Haltegrund merken, das wir ihn spaeter im Signal-Tooltip darstellen koennen
-      if Zugaktionen[Zugname].S then
-        SignalHaltegruende[Zugaktionen[Zugname].S] = Haltegrund
-      end
-
-      if Zugaktionen[Zugname].S then
-        local Begriff = leseSignal(Zugaktionen[Zugname].S)
-        if Begriff[1] ~= HALT then
-          if Zugaktionen[Zugname].V then
-            if Zugaktionen[Zugname].B and Zugaktionen[Zugname].B + 5 < EEPTime then
-              EEPSetTrainSpeed(Zugname, Zugaktionen[Zugname].V)
-              Zugaktionen[Zugname].V = nil
-              Zugaktionen[Zugname].B = nil
-            elseif not Zugaktionen[Zugname].B then
-              AnimiereZugStromabnehmer(Zugname, Zugaktionen[Zugname].V>0 and 1 or -1)
-              Zugaktionen[Zugname].B = EEPTime
-              Zugaktionen[Zugname].R = nil
-            end
-          else
-            Zugaktionen[Zugname].S = nil            
-          end
-        end
-      end
-
-    else
-      -- Zug aus den Augen verloren...
-      Zugaktionen[Zugname]=nil
+    local ok, V_ist = EEPGetTrainSpeed(Zugname)
+    if not ok or next(Zugaktionen[Zugname]) == nil then
+      Zugaktionen[Zugname] = nil
     end
+  end
+
+  for Zugname, Data in pairs(Zugaktionen) do
+    local Haltegrund = "Kein Plan"
+    local ok, V_ist = EEPGetTrainSpeed(Zugname)
+
+    -- Wenn wir stehen, merken wir uns unsere Ankunftszeit
+    if V_ist == 0 then
+      if Zugaktionen[Zugname].A == nil then
+        Zugaktionen[Zugname].A = EEPTime
+        if Zugaktionen[Zugname].V then
+          EEPSetTrainSpeed(Zugname, 0)
+          if Zugaktionen[Zugname].R then
+            AnimiereZugStromabnehmer(Zugname, 0)
+          end
+        end
+      end
+    -- Ankunftszeit loeschen falls wir unterwegs sind
+    elseif Zugaktionen[Zugname].A then
+      Zugaktionen[Zugname].A = nil
+      Zugaktionen[Zugname].S = nil
+      Zugaktionen[Zugname].R = nil
+      Zugaktionen[Zugname].V = nil
+    end
+
+    if Zugaktionen[Zugname].W then
+      Haltegrund = "Planhalt"
+    end
+
+    -- Wartezeit loeschen falls abgesessen
+    if Zugaktionen[Zugname].W and Zugaktionen[Zugname].A then
+      local Wartedauer = EEPTime - Zugaktionen[Zugname].A
+      if Wartedauer < 0 then
+        Wartedauer = Wartedauer + 24*60*60
+      end
+      if Wartedauer > Zugaktionen[Zugname].W then
+        Zugaktionen[Zugname].W = nil
+      end
+    end
+
+    -- Fahrstrasse schalten
+    if not Zugaktionen[Zugname].W and Zugaktionen[Zugname].S then
+      local ZSignal = Zugaktionen[Zugname].S
+      local FSignal = ZSignal + 1000
+      local Fahrstrassen = {}
+      if Zugaktionen[Zugname].FS then
+        Fahrstrassen = Zugaktionen[Zugname].FS
+      elseif Selbstblock_Default then
+        Fahrstrassen = {1}
+      end
+      if #Fahrstrassen > 0 then
+        if EEPGetSignal(FSignal) == 1 then
+          Schaltauftraege[FSignal] = 1+Fahrstrassen[math.random(#Fahrstrassen)]
+        end
+        Haltegrund = "FS angefordert"
+      end
+    end
+
+    -- Haltegrund merken, das wir ihn spaeter im Signal-Tooltip darstellen koennen
+    if Zugaktionen[Zugname].S then
+      SignalHaltegruende[Zugaktionen[Zugname].S] = Haltegrund
+    end
+
+    if Zugaktionen[Zugname].S then
+      local Begriff = leseSignal(Zugaktionen[Zugname].S)
+      if Begriff[1] ~= HALT then
+        if Zugaktionen[Zugname].V then
+          if Zugaktionen[Zugname].B and Zugaktionen[Zugname].B + 5 < EEPTime then
+            EEPSetTrainSpeed(Zugname, Zugaktionen[Zugname].V)
+            Zugaktionen[Zugname].V = nil
+            Zugaktionen[Zugname].B = nil
+          elseif not Zugaktionen[Zugname].B then
+            AnimiereZugStromabnehmer(Zugname, Zugaktionen[Zugname].V>0 and 1 or -1)
+            Zugaktionen[Zugname].B = EEPTime
+            Zugaktionen[Zugname].R = nil
+          end
+        else
+          Zugaktionen[Zugname].S = nil            
+        end
+      end
+    end
+
   end
 
   speicherTabelle(1, Zugaktionen)
@@ -272,12 +276,16 @@ function KsKitMain()
       local name = string.format("%04d", Signal)
       if Name and Name[Signal] then name=Name[Signal] end
       local txt = "<c>Signal "..name
-      local Stellung = EEPGetSignal(Signal)
-      if Stellung == 1 then
-        txt = txt.."\n<c><b><fgrgb=0,0,0><bgrgb=0,255,0>Fahrt</b>"
-      else
-        txt = txt.."\n<c><b><fgrgb=255,255,255><bgrgb=255,0,0>Halt</b>"
+      local Begriff = leseSignal(Signal)
+      local Farbe = "<fgrgb=255,255,255><bgrgb=255,0,0>"
+      if Begriff[1] ~= HALT then
+        if Begriff.H_erwarten or Begriff.V_max then
+          Farbe = "<fgrgb=0,0,0><bgrgb=255,255,0>"
+        else
+          Farbe = "<fgrgb=0,0,0><bgrgb=0,255,0>"
+        end
       end
+      txt = txt.."\n<c><b>"..Farbe..BegriffErklaeren(Begriff).."</b>"
       txt = txt.."<fgrgb=0,0,0><bgrgb=255,255,255>"
       local FStellung = EEPGetSignal(Signal+1000)
       if FStellung > 1 then
@@ -306,18 +314,16 @@ end
 
 function S(Signal)
   Zugaktionen[Zugname].S = Signal
-  -- Geschwindigkeit fuer Weiterfahrt ermitteln
-  local _, V = EEPGetTrainSpeed(Zugname)
-  Zugaktionen[Zugname].V = math.floor(V)
   speicherTabelle(1, Zugaktionen)
 end
 
-function R(Signal)
-  Zugaktionen[Zugname].S = Signal
-  -- Geschwindigkeit fuer Weiterfahrt ermitteln
-  local _, V = EEPGetTrainSpeed(Zugname)
-  Zugaktionen[Zugname].V = math.floor(-V)
-  -- Merken, das ein Richtungswechsel animiert werden soll
-  Zugaktionen[Zugname].R = 1
+function V(V_soll)
+  local _, V_ist = EEPGetTrainSpeed(Zugname)
+  -- Negieren, falls Zug rueckwarts faehrt
+  if V_ist < 0 then V_soll = -V_soll end
+  -- Mit dieser Division teste ich, ob beide Geschwindigkeiten das selbe Vorzeichen haben
+  -- Falls Vorzeichen ungleich, beim naechsten Halt Fahrtrichtungswechsel
+  if V_soll/V_ist < 0 then Zugaktionen[Zugname].R = 1 end
+  Zugaktionen[Zugname].V = V_soll
   speicherTabelle(1, Zugaktionen)
 end
