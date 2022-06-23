@@ -44,12 +44,12 @@ function BegriffErklaeren(Begriff)
   if Begriff[1]==HALT then return "Halt" end
   if Begriff[1]==RANGIERFAHRT then return "Rangierfahrt" end
   if Begriff[1]==ERSATZFAHRT then return "Fahrt auf Ersatzsignal" end
-  if Begriff[1]==AUS then return "Signal ausgeschaltet" end
+  if Begriff[1]==AUS then return "Aus" end
   local txt = "Fahrt"
   if Begriff.H_erwarten ~= nil then
     txt = "Halt erwarten"
-    if Begriff.kurz ~= nil then
-      txt = "Halt im verkürzten Abstand"
+    if Begriff.kurz then
+      txt = txt.." (kurzer Bremsweg)"
     end
   end
   if Begriff.V_max then

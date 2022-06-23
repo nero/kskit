@@ -278,7 +278,9 @@ function KsKitMain()
       local txt = "<c>Signal "..name
       local Begriff = leseSignal(Signal)
       local Farbe = "<fgrgb=255,255,255><bgrgb=255,0,0>"
-      if Begriff[1] ~= HALT then
+      if Begriff[1] == AUS then
+        Farbe = ""
+      elseif Begriff[1] ~= HALT then
         if Begriff.H_erwarten or Begriff.V_max then
           Farbe = "<fgrgb=0,0,0><bgrgb=255,255,0>"
         else
