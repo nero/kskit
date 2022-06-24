@@ -5,21 +5,43 @@ title: KsKit für Eisenbahn.exe
 
 # KsKit für Eisenbahn.exe
 
-KsKit enthält Steuer-Code für ESTW-basierende Strecken- und Bahnhofsanlagen.
-Epochenmäßig liegt der Fokus auf Bahnanlagen der Epoche VI.
-Die Vorbildsituation ist dem Bahnhof Bad Schandau entnommen.
+KsKit enthält Steuer-Code für Strecken- und Bahnhofsanlagen in EEP.
 
-Der Hauptanwendungsfall sind Anlagen mit realistischen Entfernungen und vorbildexakter Streckenausstattung.
-Daher enthält die Dokumentation auch Richtlinien zur Platzierung der Streckenaustattung, obwohl diese für die Zugsicherheit in EEP nicht notwendig sind.
+Derzeit ist noch alles etwas im Flux, wenn du vom EEP Forum hierhergefunden hast, warte bitte ab bis ich offizielle Ankündigungen mache.
 
-Als Referenz diente das Buch "Sicherung des Schienenverkehrs" von Ulrich Maschek / Springer Vieweg.
+## On.lua
 
-Es ist zu beachten, das übermäßiger Perfektionismus bei dem Ausgestalten der Anlage hinderlich sein kann.
-Mit vorbildnaher Detailierheit nimmt die Bauzeit dann auch vorbildnahe Dimensionen an.
-In dieser Dokumentation werden viele Anordnungen des Vorbilds erklärt.
-Wenn man diese dann Verstanden hat, wird man sie natürlich auf der eigenen Anlage nachbilden wollen.
-Hier sollte der EEP-Bahner in der Lage sein, einen Schlussstrich zu ziehen, ab wo man sich mit der Vorbildnähe zufrieden gibt.
-Im Zweifel dann lieber auf die Streckenausstattung verzichten, man will ja noch zu Lebzeiten fertigwerden.
+On.lua übernimmt die Entgegennahme sämtlicher Callbacks und erlaubt es, mehrere Funktionen durch einen EEP-Callback auszuführen.
+Das Script kann einzeln [Hier](Install_00/On.lua) heruntergeladen werden.
+
+Das bedeutet allerdings auch, das im Anlagenscript keine EEPMain, EEPOnSignal und EEPOnSwitch zu definieren sind.
+Als Ersatz dafür bietet KsKit eine eigene Schnittstelle an:
+
+```
+Main(function()
+  print("Main")
+  -- return-Wert von hier wird ignoriert
+end)
+
+OnSignal(1, function(Stellung)
+  print("Signal 1 zeigt jetzt Stellung ", Stellung)
+end)
+
+OnSwitch(2, function(Stellung)
+  if Stellung == 1 then
+    print("Weiche 2 ist auf Durchfahrt gestellt")
+  elseif Stellung == 2 then
+    print("Weiche 2 ist auf Abzweig gestellt")
+  elseif Stellung == 3 then
+    print("Weiche 2 ist auf Coabzweig gestellt")
+  end
+end)
+```
+
+Auf diese Art definierte Callbacks dürfen beliebig wiederholt werden.
+Ruft EEP den Callback auf, werden alle dazu eingetragenen Funktionen aufgerufen.
+
+Die Anmeldung bei EEP durch die `EEPRegister...` Funktionen wird von KsKit automatisch vorgenommen.
 
 ## Übersicht über ähnliche Werke
 
@@ -197,35 +219,3 @@ Für eine Vorbildgerechte Ansteuerung muss hier auf Lua zurückgegriffen werden.
 ### Mehrabschnittssignale
 
 
-## EEPMain und Callbacks
-
-KsKit übernimmt die Entgegennahme sämtlicher Callbacks und erlaubt es, mehrere Funktionen durch einen EEP-Callback auszuführen.
-
-Das bedeutet allerdings auch, das im Anlagenscript keine EEPMain, EEPOnSignal und EEPOnSwitch zu definieren sind.
-Als Ersatz dafür bietet KsKit eine eigene Schnittstelle an:
-
-```
-Main(function()
-  print("Main")
-  -- return-Wert von hier wird ignoriert
-end)
-
-OnSignal(1, function(Stellung)
-  print("Signal 1 zeigt jetzt Stellung ", Stellung)
-end)
-
-OnSwitch(2, function(Stellung)
-  if Stellung == 1 then
-    print("Weiche 2 ist auf Durchfahrt gestellt")
-  elseif Stellung == 2 then
-    print("Weiche 2 ist auf Abzweig gestellt")
-  elseif Stellung == 3 then
-    print("Weiche 2 ist auf Coabzweig gestellt")
-  end
-end)
-```
-
-Auf diese Art definierte Callbacks dürfen beliebig wiederholt werden.
-Ruft EEP den Callback auf, werden alle dazu eingetragenen Funktionen aufgerufen.
-
-Die Anmeldung bei EEP durch die `EEPRegister...` Funktionen wird von KsKit automatisch vorgenommen.
