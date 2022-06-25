@@ -6,14 +6,48 @@ title: KsKit für Eisenbahn.exe
 # KsKit für Eisenbahn.exe
 
 KsKit enthält Steuer-Code für Strecken- und Bahnhofsanlagen in EEP.
-Der Code ist auf mehere Scripte aufgeteilt, die Scripte haben teilweise sehr spezifische Funktion und können zum Teil auch alleinstehend in Anlagen verwendet werden.
+Der Code ist auf mehrere Scripte aufgeteilt, die Scripte haben teilweise sehr spezifische Funktion und können zum Teil auch alleinstehend in Anlagen verwendet werden.
 
 Derzeit ist noch alles etwas im Flux, wenn du vom EEP Forum hierhergefunden hast, warte bitte ab bis ich offizielle Ankündigungen mache.
 
-Das Gesamtpacket kann [hier](https://github.com/nero/kskit/archive/refs/heads/master.zip) als Zip-Datei heruntergeladen werden, es lässt sich dann wie ein Modell installieren.
+Alle Einzelscripte können [hier](https://github.com/nero/kskit/archive/refs/heads/master.zip) als Zip-Datei heruntergeladen werden, die lässt sich dann wie ein Modell installieren.
 Die Teilscripte werden in den LUA-Ordner im EEP-Stammverzeichnis installiert.
 
 ## Fahrstrassen
+
+Fahrstrassen bestehen aus jeweils einem Start- und Endsignal und haben eine Liste von Fahrwegelementen:
+
+Der Fahrweg einer Fahrstraße besteht aus beliebigen Splines, meist jedoch Gleise.
+Pro Spline kann dabei nur maximal eine Fahrstraße aktiv geschalten sein.
+Wird versucht, eine Fahrstraße zu schalten, deren Fahrweg von einer anderen Fahrstraße besetzt ist, hat der Schaltversuch keine Wirkung.
+Das selbe gilt auch, wenn die Splines einer Fahrstraße von Rollmaterialien besetzt sind.
+Dies wird beim Vorbild als Fahrstraßenausschluss bezeichnet.
+Beim Bearbeiten im 2D-Modus werden die Splines einer Fahrstraße Fahrstraße mit einer einfarbigen Linie überzeichnet, um ihre Zugehörigkeit anzuzeigen.
+
+Signale als Teil einer Fahrstraße bewirken keinen Fahrstraßenausschluss.
+Das Schalten einer weiteren Fahrstraße mit diesem Signal stellt dieses einfach um.
+Signale zeigen beim Bearbeiten der Fahrstraße mittels farblicher Unterlegung an, ob sie zu einer Fahrstraße gehören.
+
+Weichen in Fahrstraßen bewirken einen Fahrstraßenausschluss auf alle Fahrstraßen, welche die Weiche in einer anderen Stellung eingestellt haben.
+Fahrstraßen, welche die selbe Weiche in der selben Stellung aufgenommen haben, dürfen gleichzeitig geschaltet werden, sofern sie sich nicht anders (z.B. über die Splines der jeweiligen Weiche) ausschließen.
+
+### Fahrstraßen-Startsignal
+
+Fahrstraßen werden über das Startsignal gesteuert.
+Die Stellung des Startsignales ist 1, falls keine Fahrstraße geschaltet ist.
+Die höheren Stellungen entsprechen jeweils einer Fahrstraße zu einem Zielsignal.
+Stellung 2 ist die erste Fahrstraße, Stellung 3 die zweite und so weiter.
+
+Eine Schaltung kann mittels Signalverknüpfung, Kontakte und `EEPSetSignal` versucht werden.
+Kann die Fahrstraße nicht geschaltet werden, weil z.B. Rollmaterialien auf dem Gleis stehen oder ein Fahrstraßenausschluss diese blockiert, hat der Schaltversuch keinen Erfolg.
+Darüber erfolgt keine unmittelbare Rückmeldung.
+
+### Fahrstraßen-Zielsignal
+
+Das Fahrstraßen-Zielsignal ist eher als Zielmarkierung zu verstehen.
+Zum Schalten von Fahrstraßen nicht geeignet, die notwendigen Information zum Startsignal dort nicht eingegeben werden können.
+
+Die Stellung des Zielsignales ist 1, wenn keine Fahrstraße dorthin führt, und 2, wenn es Ziel einer geschalteten Fahrstraße ist.
 
 ### Schutzweiche
 
