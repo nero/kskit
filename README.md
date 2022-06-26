@@ -79,6 +79,39 @@ Diese virtuelle Schutzweiche wird von den sich auszuschliessenden Fahrstrassen i
 Die Fahrstrassen müssen dafür nicht in der Nähe liegen.
 Es kann ein Ausschluss zwischen beliebigen Fahrstrassen realisiert werden.
 
+## Bahnübergänge
+
+Bahnübergänge können recht einfach über Fahrstrassen gelöst werden.
+
+In den Fahrstrassen für den Zugverkehr werden beide Schranken aufgenommen, sie werden beim Einstellen der Fahrstraße auf Halt gestellt.
+Da mehrere Fahrstrassen gleichzeitig über den Bahnübergang führen können, dürfen die Schranken beim Auflösen einer Fahrstrasse nicht auf Fahrt gestellt werden.
+
+![Eine Fahrstrasse für die Gleise](img/bue_fs.png)
+
+Um die Schranken zu öffnen, nachdem alle Fahrstraßen aufgelöst wurden, wird eine Hilfsfahrstraße auf einem naheliegenden unsichtbaren Spline eingerichtet.
+Diese hat die Gleise des Bahnüberganges als Fahrwegelemente eingetragen und öffnet beim Schalten die beiden Schranken.
+Beim Auflösen hat sie auf die Schranken keine Wirkung.
+
+![Die Hilfsfahrstrasse für die Straße](img/bue_hfs.png)
+
+Damit die Freigabe des Bahnüberganges funktioniert, muss regelmäßig das Schalten der Hilfsfahrstrasse versucht werden.
+Dies kann entweder mit einen Schaltauto oder mit Lua realisiert werden:
+
+```
+-- Wenn die Schranke geschlossen ist
+if EEPGetSignal(1) == 2 then
+  -- Hilfsfahrstrasse schalten
+  EEPSetSignal(3, 2)
+  -- Hilfsfahrstrasse auflösen
+  EEPSetSignal(3, 1)
+end
+```
+
+Wichtig ist, das die Hilfsfahrstrasse sofort wieder aufgelöst wird und nicht geschaltet bleibt.
+
+Durch die Aufnahme der Gleise in die Hilfsfahrstrasse wird zu einem erzielt, das die Schranken nicht geöffnet werden können, solange eine Zugfahrstrasse über den Bahnübergang führt.
+Zum anderen blockieren auch Rollmaterialien das Öffnen der Schranken, womit z.B. Rangierfahrten und Wendemanöver im Bahnhofskopf entsprechend gesichert werden können.
+
 ## Lua
 
 ### Mehrere Funktionen pro Callback
