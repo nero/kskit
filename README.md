@@ -33,6 +33,11 @@ Signale zeigen beim Bearbeiten der Fahrstraße mittels farblicher Unterlegung an
 Weichen in Fahrstrassen bewirken einen Fahrstrassenausschluss auf alle Fahrstrassen, welche die Weiche in einer anderen Stellung eingestellt haben.
 Fahrstrassen, welche die selbe Weiche in der selben Stellung aufgenommen haben, dürfen gleichzeitig geschaltet werden, sofern sie sich nicht anders (z.B. über die Splines der jeweiligen Weiche) ausschließen.
 
+Sehr viele EEP-Benutzer finden Fahrstrassensignale im 3D-Modus unschön.
+Unter "Ansicht" -> "Anzeige 3D-Fenster" -> "3D Fahrstrassen Signale" kann man das Rendern abstellen.
+
+![Menüeintrag zum Verstecken der Fahrstrassen](img/fs_verstecken.png)
+
 ### Startsignal
 
 Da ein Fahrstrassen-Startsignal selbst keine Züge anhalten kann, wird es meist in Verbindung mit einem regulären Signal verwendet.
@@ -49,7 +54,7 @@ Das Signal wird in die Fahrstrasse aufgenommen, bei mehrbegriffigen Signalen kan
 
 ### Zielsignal
 
-Das Zielsignal löst bei Durchfahrt der Zugspite die Fahrstrasse auf.
+Das Zielsignal löst bei Durchfahrt der Zugspitze die Fahrstrasse auf.
 Sämtlicher Bereich nach dem Ende der Fahrstrasse wird daher nicht gegen Folgefahrten geschützt.
 
 ![Unüberwachter Bereich nach dem Zielsignal: Eine BR 212 ist zu kurz und wird vom Folgezug gleich unsanft aufgegabelt](img/fs_ziel_luecke.png)
@@ -89,7 +94,7 @@ Eine Schaltung kann mittels Signalverknüpfung, Kontakte und `EEPSetSignal` vers
 Kann die Fahrstraße nicht geschaltet werden, weil z.B. Rollmaterialien auf dem Gleis stehen oder ein Fahrstrassenausschluss diese blockiert, hat der Schaltversuch keinen Erfolg.
 Darüber erfolgt keine unmittelbare Rückmeldung.
 
-Das Zielsignal hat nur zwei Stellungen und bietet daher keine Information welche Fahrstrasse geschaltet ist.
+Das Zielsignal hat nur zwei Stellungen und bietet daher keine Information darüber, welche Fahrstrasse geschaltet ist.
 
 ### Schutzweiche
 
