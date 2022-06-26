@@ -83,6 +83,18 @@ Sobald das Zugende den Weichenbereich verlassen hat, wird die Fahrstrasse aufgel
 Wenn in ein Gleis auch von einem anderen Startsignal oder sogar auch ohne Fahrstrasse eingefahren werden kann, muss der Kontakt angepasst werden, das er nur wirkt, wenn das eigene Startsignal auch aktiv ist.
 Wird das nicht gemacht, kann eine Paralleleinfahrt zu verfrühten Auflösen von Fahrstrassen führen.
 
+### Profilfreiheit
+
+Bei der Berechnung von Fahrstrassenausschlüssen werden die Fahrwege auf ihre Freiheit von Rollmaterialien und fremden Fahrstrassen überprüft.
+Was dabei nicht überprüft wird, ist der Lichtraum über den Fahrwegen, auf denen die Fahrzeuge fahren.
+Speziell im Weichenbereich von Bahnhöfen kann es vorkommen, das sich geschaltete Fahrstrassen überkreuzen und die Züge durcheinander durch fahren.
+
+Dem kann abgeholfen werden, wenn zu jeder Fahrstraße alle Fahrwege hinzugefügt werden, welche im Lichtraum jener Fahrstrasse liegen.
+
+![Nicht profilfreie andere Gleise wurden hier mit in die Fahrstraße eingebunden](img/fs_raum.png)
+
+Damit wird auch die Grenzzeichenfreiheit an den Weichen sichergestellt.
+
 ### Schalten von Fahrstrassen
 
 Fahrstrassen werden über das Startsignal gesteuert.
@@ -104,19 +116,6 @@ Die Schutzweiche ist als Teil der Fahrstrasse dann ebenfalls gegen händisches U
 ![Weiche 1 ist als Schutzweiche Teil der Fahrstrasse](img/schutzweiche.png)
 
 Zwieschutzweichen können durch die EEP-Fahrstrassen nicht implementiert werden.
-
-### Kreuzende Fahrstrassen
-
-Fahrstrassen reservieren nur den Fahrweg, nicht den Raum über den Fahrweg.
-Bei Kreuzungen und DKWs kann es daher dazu kommen, das physikalisch kreuzende Fahrstrassen keine gemeinsamen Fahrwegelemente haben und sich daher nicht gegenseitig ausschließen.
-
-Die Vorgehensweise ist hier die selbe wie bei Schutzweichen.
-Weichen, die nicht Teil des Fahrweges selber sind, werden mit in die Fahrstrasse aufgenommen.
-Es ist darauf zu achten, das Weichen dabei von der Kreuzung wegzeigen.
-
-![Weichen 5 und 6 sind Teil der Fahrstrasse. In diesem Fall mit dem Hosenträger wird durch die extra Weichen kein Flankenschutz sichergestellt](img/kreuzung.png)
-
-Die Fahrstrasse erzwingt dadurch eine Stellung der Weichen, die keine kreuzende Durchfahrt mehr erlaubt.
 
 ### Virtuelle Schutzweichen
 
