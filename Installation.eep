@@ -4,3 +4,10 @@ Name_ENG	 = "Serializer"
 Desc_GER	 = "Lua-Tabellen serialisieren, in Slots abspeichern und wieder laden"
 Desc_ENG	 = "Serialize Lua tables, save them in slots, and load them again"
 Script	 = "Installscripts\Serializer.ini"
+
+[Install_01]
+Name_GER	 = "Zuggreifer"
+Name_ENG	 = "Train grabber"
+Desc_GER	 = "Einen Zug durch Gleisbesetztmeldung identifizieren und abfahren lassen"
+Desc_ENG	 = "Identify and start trains by track occupation query"
+Script	 = "Installscripts\Zuggreifer.ini"
