@@ -1,6 +1,6 @@
 [Install_00]
-Name_GER	 = "KsKit v1.1"
-Name_ENG	 = "KsKit v1.1"
-Desc_GER	 = "Script-Kollektion von Nero"
-Desc_ENG	 = "Nero's script collection"
-Script	 = "Install_00\Install.ini"
+Name_GER	 = "Serializer"
+Name_ENG	 = "Serializer"
+Desc_GER	 = "Lua-Tabellen serialisieren, in Slots abspeichern und wieder laden"
+Desc_ENG	 = "Serialize Lua tables, save them in slots, and load them again"
+Script	 = "Installscripts\Serializer.ini"
