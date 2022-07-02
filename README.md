@@ -1,6 +1,7 @@
 ---
 author: Nero
 title: KsKit für Eisenbahn.exe
+lang: de
 ---
 
 # KsKit für Eisenbahn.exe
@@ -148,7 +149,7 @@ Dies kann entweder mit einen Schaltauto oder mit Lua realisiert werden:
 if EEPGetSignal(1) == 2 then
   -- Hilfsfahrstrasse schalten
   EEPSetSignal(3, 2)
-  -- Hilfsfahrstrasse auflösen
+  -- Hilfsfahrstrasse aufloesen
   EEPSetSignal(3, 1)
 end
 ```
