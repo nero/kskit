@@ -1,3 +1,8 @@
+function ZuggreiferMelden(...)
+  local Zeitstempel = string.format("%02d:%02d:%02d", EEPTimeH, EEPTimeM, EEPTimeS)
+  print(Zeitstempel," Zuggreifer: ",...)
+end
+
 -- Erwartet im Anlagenscript definierte Zuggreifer-Tabelle:
 --   Schluessel ist die Signal-ID
 --   Wert ist eine Liste von Gleisen vor dem Signal
@@ -18,13 +23,13 @@ function ZuggreiferInstallieren(Optionen)
   if Optionen == nil then Optionen={} end
   for Signal, Schienen in pairs(Zuggreifer) do
     if EEPGetSignal(Signal) == 0 then
-      print("Zuggreifer findet Signal "..Signal.." nicht")
+      ZuggreiferMelden("finde Signal "..Signal.." nicht")
     end
     -- Schienen fuer die Gleisbesetztabfrage registrieren
     for i=1,#Schienen do
       local SchienenID = math.abs(Schienen[i])
       if not EEPRegisterRailTrack(SchienenID) then
-        print("Zuggreifer "..Signal.." findet Gleis "..SchienenID.." nicht")
+        ZuggreiferMelden("Signal "..Signal.." findet Gleis "..SchienenID.." nicht")
       end
     end
     -- Vorherigen Callback retten
@@ -44,12 +49,13 @@ function ZuggreiferInstallieren(Optionen)
       -- Nix tun, wenn das Signal auf Halt gestellt wurde
       local Fahrt, V_max = leseSignal(Signal)
       if not Fahrt then return end
+      if type(V_max) ~= "number" then V_max = Optionen.V end
       if type(V_max) ~= "number" then V_max = 40 end 
       -- Zug ermitteln
       local Zugname, Richtung = ZuggreiferAbfragen(Zuggreifer[Signal])
       -- Erfolg melden
       if Optionen.Melden then
-        print("Signal ",Signal," hat ",Zugname and Zugname or "ins Leere"," gegriffen")
+        ZuggreiferMelden("Signal ",Signal," hat ",Zugname and Zugname or "ins Leere"," gegriffen")
       end
       -- Abfahrbefehl erteilen
       if Zugname then
@@ -95,7 +101,7 @@ function ZuggreiferAbfragen(Schienen)
         -- Richtung des Fahrzeugs im Zug ermitteln, benoetigt EEP 15 Plugin 1
         local FahrzeugVorwaerts = true
         if type(EEPRollingstockGetOrientation) == "function" then
-          local ok, FahrzeugVorwaerts = EEPRollingstockGetOrientation(FahrzeugName)
+          _, FahrzeugVorwaerts = EEPRollingstockGetOrientation(FahrzeugName)
         end
         -- Richtung zusammenmultiplizieren und mit Zugnamen zurueckgeben
         return Zugname, SchienenMap[Gleis] * ( FahrzeugRichtung > 0 and 1 or -1) * (FahrzeugVorwaerts and 1 or -1)
