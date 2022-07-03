@@ -95,6 +95,46 @@ dump(ladeTabelle(1))
 -- Ausgabe: {bol=true,lst={1,2,3},str="abcdef"}
 ```
 
+### Praxisbeispiel
+
+Es ist nicht notwendig, eine Tabelle vor jeder Benutzung zu laden und wieder zu speicern.
+
+Viel schneller ist es, die Tabelle als globale Variable zu halten und nur beim Lua-Start einmal einzulesen.
+Die Tabelle kann dann wie jede andere Tabelle verwendet werden.
+
+Die EEPMain wird innerhalb eines Zyklus zuletzt aufgerufen.
+Die Kontakte und Callbacks werden davor abgearbeitet.
+Daher reicht es aus, wenn die Tabelle nur einmalig am Ende der EEPMain zurückgeschrieben wird.
+
+```
+require("Serializer")
+
+-- Die Tabelle wird nur beim Starten von Lua einmal geladen
+Zugdaten_Slotnummer = 1
+Zugdaten = ladeTabelle(Zugdaten_Slotnummer)
+
+-- Diese Funktion wird in Kontakten eingetragen
+function Richtung_Merken(Zugname)
+  local ok, V = EEPGetTrainSpeed(Zugname)
+  Zugdaten[Zugname].V = V
+end
+
+function Zug_Wenden(Zugname)
+  local Vneu = -Zugdaten[Zugname].V
+  EEPSetTrainSpeed(Zugname, Vneu)
+  Zugdaten[Zugname].V = Vneu
+end
+
+function EEPMain()
+  -- andere Dinge tun
+  -- ...
+
+  -- Wir sind am Ende des EEP-Zyklus, nur einmal hier speichern
+  speicherTabelle(Zugdaten_Slotnummer, Zugdaten)
+  return 1
+end
+```
+
 ## Fahrstrassen
 
 Fahrstrassen bestehen aus jeweils einem Start- und Endsignal und haben eine Liste von Fahrwegelementen:
