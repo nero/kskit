@@ -97,7 +97,7 @@ dump(ladeTabelle(1))
 
 ### Praxisbeispiel
 
-Es ist nicht notwendig, eine Tabelle vor jeder Benutzung zu laden und wieder zu speicern.
+Es ist nicht notwendig, eine Tabelle vor jeder Benutzung zu laden und wieder zu speichern.
 
 Viel schneller ist es, die Tabelle als globale Variable zu halten und nur beim Lua-Start einmal einzulesen.
 Die Tabelle kann dann wie jede andere Tabelle verwendet werden.
@@ -281,39 +281,3 @@ Zum anderen blockieren auch Rollmaterialien das Öffnen der Schranken, womit z.B
 Wenn die Schranke mit einer Startverzögerung konfiguriert ist, liest EEPGetSignal nach dem Öffnen der Schranke weiterhin eine Haltstellung aus.
 Die Fahrstrasse wird dann 5 mal pro Sekunde geschalten, bis die Startverzögerung abgelaufen ist und EEPGetSignal die richtige Stellung zurückgibt.
 Wem das klackern der Fahrstrassensignale dann stört, der kann die oben genannte Anleitung nicht mit den Schranken selber, sondern mit einem Unsichtbaren Signal durchführen und die Schranken dann mittels Signalverknüpfung an das Unsichtbare Signal binden.
-
-## Lua
-
-### Mehrere Funktionen pro Callback
-
-Meine On.lua übernimmt die Entgegennahme sämtlicher Callbacks und erlaubt es, mehrere Funktionen durch einen EEP-Callback auszuführen.
-Das Script kann einzeln [hier](Install_00/On.lua) heruntergeladen werden.
-
-Das bedeutet allerdings auch, das im Anlagenscript keine EEPMain, EEPOnSignal und EEPOnSwitch zu definieren sind.
-Als Ersatz dafür bietet On.lua eine eigene Schnittstelle an:
-
-```
-Main(function()
-  print("Main")
-  -- return-Wert von hier wird ignoriert
-end)
-
-OnSignal(1, function(Stellung)
-  print("Signal 1 zeigt jetzt Stellung ", Stellung)
-end)
-
-OnSwitch(2, function(Stellung)
-  if Stellung == 1 then
-    print("Weiche 2 ist auf Durchfahrt gestellt")
-  elseif Stellung == 2 then
-    print("Weiche 2 ist auf Abzweig gestellt")
-  elseif Stellung == 3 then
-    print("Weiche 2 ist auf Coabzweig gestellt")
-  end
-end)
-```
-
-Auf diese Art darf der selbe Callback mehrfach definiert werden.
-Ruft EEP den Callback auf, werden alle dazu eingetragenen Funktionen aufgerufen.
-
-Die Anmeldung bei EEP durch die `EEPRegister...` Funktionen wird von KsKit automatisch vorgenommen.
