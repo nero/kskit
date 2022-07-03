@@ -6,15 +6,94 @@ lang: de
 
 # KsKit für Eisenbahn.exe
 
-KsKit sollte ursprünglich eine Vollumfassende Lösung für viele Lua-Verschaltungen in EEP werden.
-Während der Entwicklungszeit bildete sich heraus, das für viele Lösungen nur wenig oder gar kein Lua notwendig ist.
-Daher ist die "Kernarbeit" von KsKit diese Dokumentation.
-Vorgehensweisen, welche keine KsKit-Scripte benötigen, können auch auf Anlagen mit dem RUS-Packet oder Automatic Train Control angewendet werden.
-
-Derzeit ist noch alles etwas im Flux, wenn du vom EEP Forum hierhergefunden hast, warte bitte ab bis ich offizielle Ankündigungen mache.
+KsKit sind ein paar Lua-Scripte und Anleitungen, welche ich auf meinen Anlagen nutze.
+Von denen habe ich ein paar Dokumentiert, sie sind bisweilen recht nützlich.
+Es ist auch immer dazugeschrieben, welche Vorraussetzungen man braucht.
 
 Alle Scripte können [hier](https://github.com/nero/kskit/archive/refs/heads/master.zip) als Zip-Datei heruntergeladen werden, die lässt sich dann wie ein Modell installieren.
 Die Teilscripte werden in den LUA-Ordner im EEP-Stammverzeichnis installiert.
+
+## Tabellen in EEP-Slots speichern
+
+Für viele ist dies sicher schon ein altbekanntes Problem.
+Die Lua-Umgebung wird von EEP in bestimmten Situationen zurückgesetzt und verliert dabei die Inhalte aller Variablen.
+Daher müssen persistente Werte via `EEPSaveData` gespeichert und nach dem Reset wieder geladen werden.
+Bei Zeichenketten und Zahlen ist das kein Problem, das Speichern von Tabellen ist nicht ohne umwege möglich.
+
+KsKit bringt einen Serializer mit, der in der Lage ist, die gängigen Lua-Daten und Tabellen in eine Zeichenkette zu serialisieren.
+
+### Funktion __tostring
+
+Die `__tostring`-Funktion ist das Herz des Serializers.
+Sie nimmt ein Argument und gibt eine Zeichenkette zurück.
+
+Der Return-Wert ist gültiges Lua und kann mittels `load()`-Funktion wieder in die Tabellenform zurückgewandelt werden.
+
+```
+require("Serializer")
+
+Tabelle={
+  str = "abcdef",
+  lst = {1,2,3},
+  bol = true
+}
+
+print(__tostring(Tabelle))
+-- Ausgabe: {bol=true,lst={1,2,3},str="abcdef"}
+```
+
+Unterstützt werden Wahrheitswerte, Zeichenketten, Zahlen und verschachtelte Tabellen.
+Lambda-Funktionen werden ignoriert, rekursiv in sich selbst verschachtelte Tabellen führen zum Absturz.
+
+### Funktion dump
+
+Die `dump()`-Funktion nimmt eine beliebige Anzahl von Argumenten und gibt diese nach der Behandlung durch `__tostring` an die normale `print`-Funktion weiter.
+
+Diese Funktion ist vergleichbar mit `print(__tostring(...))` und dient Diagnosezwecken bei Lua-Problemen.
+
+### Funktion speicherTabelle
+
+Diese Funktion macht genau das, was der Name vermuten lässt.
+Eine Lua-Tabelle wird in einem EEPSlot abgespeichert.
+
+Das erste Argument zu der Funktion ist dabei die Slotnummer, das zweite Argument eine Lua-Tabelle.
+
+Die Tabelle wird mittels `__tostring` in eine Zeichenkette umgewandelt.
+Die EEPSlots unterstützen jedoch nicht alle möglichen Zeichen.
+Daher wird das Zwischenergebnis nochmal in ein `urlencode`-ähnliches Format umkonvertiert.
+Dabei werden sämtliche Steuerzeichen und Hochkommas sicher verpackt.
+
+```
+require("Serializer")
+
+Tabelle={
+  str = "abcdef",
+  lst = {1,2,3},
+  bol = true
+}
+
+speicherTabelle(1, Tabelle)
+
+-- So sieht der Datenslot hinterher in der Lua-Datei aus:
+-- [EEPLuaData]
+-- DS_1 = "{bol=true,lst={1,2,3},str=%22abcdef%22}"
+```
+
+### Funktion ladeTabelle
+
+Das pendant zu `speicherTabelle`.
+Als Argument wird die Slotnummer übergeben, als Return-Wert erhält man die vorher gespeicherte Tabelle zurück.
+
+Dabei wird das `urlencode` wieder entfernt und die Daten mittels `load`-Funktion wieder eingelesen.
+
+Ist der Slot unleserlich oder wurde in diesen noch keine Tabelle geschrieben, wird eine Warnmeldung in das Ereignisfenster geschrieben und eine leere Tabelle zurückgegeben.
+
+```
+require("Serializer")
+
+dump(ladeTabelle(1))
+-- Ausgabe: {bol=true,lst={1,2,3},str="abcdef"}
+```
 
 ## Fahrstrassen
 
