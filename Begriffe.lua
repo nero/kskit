@@ -142,23 +142,23 @@ SignalModellBegriffe = {
   ["HpSig_Ae_V120_69_V8"]={Hp0,Hp1,Hp1+Zs3_12,Rangierfahrt},
   ["HpSig_Ae_V80_69_V8"]={Hp0,Hp1,Hp1+Zs3_8,Rangierfahrt},
   ["HpSig_Ae_V80_Vs_69_V8"]={Hp0,Hp1+Vr0,Hp1+Vr1,Hp1+Zs3_8+Vr0,Hp1+Zs3_8+Vr1,Rangierfahrt},
-  ["HpSig_B_69_V7"]={},
-  ["HpSig_B_Vswg_69_V7"]={},
-  ["HpSig_B_Vswg_oVSig_69_V7"]={},
-  ["HpSig_B_Vswr_69_V7"]={},
-  ["HpSig_B_Vswr_oVSig_69_V7"]={},
-  ["HpSig_B_oVSig_69_V7"]={},
-  ["HpSig_EZ_V40_Vs_69_V7"]={Hp2,Hp0},
+  ["HpSig_B_69_V7"]={Hp0,Hp1},
+  ["HpSig_B_Vswg_69_V7"]={Hp0,Hp1+Vr0,Hp1+Vr1},
+  ["HpSig_B_Vswg_oVSig_69_V7"]={Hp0,Hp1+Vr0,Hp1+Vr1},
+  ["HpSig_B_Vswr_69_V7"]={Hp0,Hp1+Vr0,Hp1+Vr1},
+  ["HpSig_B_Vswr_oVSig_69_V7"]={Hp0,Hp1+Vr0,Hp1+Vr1},
+  ["HpSig_B_oVSig_69_V7"]={Hp0,Hp1},
+  ["HpSig_EZ_V40_Vs_69_V7"]={},
   ["HpSig_EZw_V40_Vr0_EpIV"]={Hp2+Vr0,Hp0},
   ["HpSig_EZw_Vmax_Vr0_EpIV"]={Hp1,Hp0},
-  ["HpSig_E_V100_69_V8"]={},
+  ["HpSig_E_V100_69_V8"]={Hp0,Hp1,Hp1+Zs3_10,Hp2},
   ["HpSig_E_V100_Vs_69_V8"]={},
   ["HpSig_E_V100_Vs_V60_69_V8"]={},
   ["HpSig_E_V100_Vs_V60_l_69_V8"]={},
   ["HpSig_E_V100_Vs_V80_69_V8"]={},
   ["HpSig_E_V100_Vs_V80_l_69_V8"]={},
   ["HpSig_E_V100_Vs_l_69_V8"]={},
-  ["HpSig_E_V100_l_69_V8"]={},
+  ["HpSig_E_V100_l_69_V8"]={Hp0,Hp1,Hp1+Zs3_10,Hp2},
   ["HpSig_E_V20_30_69_V8"]={},
   ["HpSig_E_V20_30_l_69_V8"]={},
   ["HpSig_E_V20_69_V8"]={},
@@ -314,6 +314,75 @@ SignalModellBegriffe = {
   ["Wartesignal_DR_alt_HK1"]={Sh0,Rangierfahrt},
   ["Wartesignal_DR_neu_HK1"]={Sh0,Rangierfahrt},
 }
+
+-- Die Begriffe von den AH1-69er Signalen generieren wir aus dem Namen. Scheiss Tipperei!
+do
+  for Modell, _ in pairs(SignalModellBegriffe) do
+    if string.match(Modell, "HpSig_.*_V[78]$") then
+      local Begriffe = {}
+      local Typ, HS, VS = string.match(Modell, "HpSig_(%a*)_([^s]*)Vsw?g?r?_(.*)69_V[78]")
+      if not Typ then
+        Typ, HS = string.match(Modell, "HpSig_(%a*)_([^s]*)69_V[78]")
+      end
+
+      local function MitVr(a)
+        if VS then
+          table.insert(Begriffe, a+Vr0)
+          table.insert(Begriffe, a+Vr1)
+          if string.match(VS, "V60_80") then
+            table.insert(Begriffe, a+Vr1+Zs3v_8)
+            table.insert(Begriffe, a+Vr2+Zs3v_6)
+          elseif string.match(VS, "V60") and (not a.V_max or a.V_max >= 60 or string.match(HS, "V40")) then
+            table.insert(Begriffe, a+Vr2+Zs3v_6)
+          elseif string.match(VS, "V80") and (not a.V_max or a.V_max >= 80 or string.match(HS, "V40"))then
+            table.insert(Begriffe, a+Vr1+Zs3v_8)
+          elseif string.match(VS, "V100") then
+            table.insert(Begriffe, a+Vr1+Zs3v_10)
+          end
+          if string.match(Typ,"E") or Typ == "AZ" then table.insert(Begriffe, a+Vr2) end
+          if string.match(VS, "V20_30") and (not a.V_max or a.V_max >= 30)then
+            table.insert(Begriffe, a+Vr2+Zs3v_3)
+            table.insert(Begriffe, a+Vr2+Zs3v_2)
+          elseif string.match(VS, "V30") and (not a.V_max or a.V_max >= 30)then
+            table.insert(Begriffe, a+Vr2+Zs3v_3)
+          elseif string.match(VS, "V20") and (not a.V_max or a.V_max >= 20)then
+            table.insert(Begriffe, a+Vr2+Zs3v_2)
+          end
+        else
+          table.insert(Begriffe, a)
+        end
+      end
+
+      table.insert(Begriffe, Hp0)
+      MitVr(Hp1)
+      if string.match(HS, "V100") then
+        MitVr(Hp1+Zs3_10)
+      elseif string.match(HS, "V60_80") then
+        MitVr(Hp1+Zs3_8)
+        MitVr(Hp2+Zs3_6)
+      elseif string.match(HS, "V60") then
+        MitVr(Hp2+Zs3_6)
+      elseif string.match(HS, "V80") then
+        MitVr(Hp1+Zs3_8)
+      end
+      if not string.match(HS, "Vmax") and Typ ~= "Ae" then
+        MitVr(Hp2)
+      end
+      if string.match(HS, "V20_30") then
+        MitVr(Hp2+Zs3_3)
+        MitVr(Hp2+Zs3_2)
+      elseif string.match(HS, "V20") then
+        MitVr(Hp2+Zs3_2)
+      elseif string.match(HS, "V30") then
+        MitVr(Hp2+Zs3_3)
+      end
+      if string.match(Typ, "A") then
+        table.insert(Begriffe, Rangierfahrt)
+      end
+      SignalModellBegriffe[Modell]=Begriffe
+    end
+  end
+end
 
 function BegriffErklaeren(Begriff)
   if Begriff == nil then return "nil", "" end
