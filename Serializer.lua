@@ -35,7 +35,7 @@ function __tostring(tab)
 end
 
 -- Funktion, welche sich wie print() verhaelt, aber Tabellen als String ausgibt
-function nprint(...)
+function dump(...)
   local args={...}
   for i=1,#args do
     if type(args[i]) == "table" then
