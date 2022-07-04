@@ -424,14 +424,14 @@ function SignalmodelleAusAnlagendatei(Datei)
   for capture in string.gmatch(xml, "<Meldung .- name=\".-\" Key_Id=\"%d*\"") do
     local Model, ID = string.match(capture, 'name=\"(.-)\" Key_Id=\"(%d+)\"')
     if not string.match(Model, "system/") then
-      Signalmodelle[ID]=Model
+      Signalmodelle[tonumber(ID)]=Model
     end
   end
 
   return Signalmodelle
 end
 
-
+-- Signalbegriff lesen
 function leseSignalMitModell(ID, Modell, Stellung)
   local Stellung = Stellung or EEPGetSignal(ID)
   if SignalModellBegriffe[Modell] ~= nil then
@@ -440,4 +440,60 @@ function leseSignalMitModell(ID, Modell, Stellung)
     local Defaults={Hp1,Hp0}
     return Defaults[Stellung]
   end
+end
+
+-- Signalbegriff setzen
+-- Faktisch sortiert diese Funktion alle Begriffe je nachdem, wie gut sie der gesuchten Stellung entsprechen
+-- Der erste (besten-passende) Begriff wird dann gesetzt
+-- Die Funktion ist zwar saumaessig kompliziert, kann aber bei Geschwindigkeitsabstufungen auf gerigere Geschwindigkeiten zurueckfallen.
+-- Speziell bei Hl-Signalen, die sich einen VS-Begriff fuer V40 und V60 teilen, ist das nuetzlich.
+-- Bei Signalen mit einer sehr schlechten Auswahl an Begriffen kommt hier vielleicht Murks raus
+-- Das sollte man vielleicht genauer testen
+function stelleSignalMitModell(ID, Modell, Stellung)
+  local Begriffe = SignalModellBegriffe[Modell]
+  -- Achso, wir sortieren nicht die richtige Begriffstabelle, sondern eine Ersatztabelle mit den Indexen.
+  -- Ist performanter. Und wir zerschiessen uns nicht die Begriffstabelle, weil wir die ja per Referenz haben.
+  local order={}
+  for i=1,#Begriffe do
+    table.insert(order, i)
+  end
+  -- Sortieraufruf mit Sortierlabda
+  table.sort(order, function(a,b)
+    local StlgA = Begriffe[a]
+    local StlgB = Begriffe[b]
+    local props={1,"Zugfahrt","V_max","H_erwarten","V_erwarten","Kurz"}
+    for i=1,#props do
+      -- Folgendes Muster: Wenn Stellung A und B sich in einem Merkmal unterscheiden
+      -- UND Stellung A in diesem Merkmal mit der Zielstellung uebereinstimmt,
+      -- DANN ist Stellung A besset geeignet, sonst nicht
+      -- Wir muessen das auch andersherum mit Stellung B machen
+      if StlgA[props[i]] ~= StlgB[props[i]] then
+        if StlgA[props[i]] == Stellung[props[i]] then return true end
+        if StlgB[props[i]] == Stellung[props[i]] then return false end
+        -- Muster: Geschwindigkeitsmerkmal ist vorhanden und kleiner als Ziel, aber der Vergleichsbegriff:
+        -- - zeigt das Merkmal gar nicht
+        -- - zeigt eine hohere Geschwindigkeit als gewollt
+        -- - zeigt eine noch kleinere Geschwindigkeit
+        -- Dann ist der Vergleichsbegriff schlechter geeignet
+        -- Und das dann jeweils in beide Richtungen
+        if i == 3 or i == 5 then -- 3 ist V_max, 5 ist V_erwarten
+          if StlgA[props[i]] and Stellung[props[i]] and StlgA[props[i]] < Stellung[props[i]] then
+            if StlgB[props[i]] == nil then return true end
+            if StlgB[props[i]] > Stellung[props[i]] then return true end
+            if StlgB[props[i]] < StlgA[props[i]] then return true end
+          end
+          if StlgB[props[i]] and Stellung[props[i]] and StlgB[props[i]] < Stellung[props[i]] then
+            if StlgA[props[i]] == nil then return false end
+            if StlgA[props[i]] > Stellung[props[i]] then return false end
+            if StlgA[props[i]] < StlgB[props[i]] then return false end
+          end
+        end
+      end
+    end
+    return false
+  end)
+  -- Begriff aktiv schalten... der Wert in unserer Indextabelle ist der Index in die Begriffstabelle
+  --   und damit auch genau der Wert, den EEP fuer die numerische Stellung braucht
+  EEPSetSignal(ID, order[1], 1)
+  return true
 end
